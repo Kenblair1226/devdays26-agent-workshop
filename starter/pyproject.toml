@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "copilot-finops-agent-starter"
+version = "0.1.0"
+description = "Starter project for the GitHub Copilot FinOps workshop"
+requires-python = ">=3.13"
+dependencies = [
+  "azure-ai-agentserver-invocations==1.1.0",
+  "azure-identity>=1.17,<2",
+  "github-copilot-sdk==1.0.11",
+  "python-dotenv==1.1.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<9",
+  "ruff>=0.11,<1",
+]
+
+[project.scripts]
+finops-agent = "finops_agent.local_cli:main"
+
+[tool.setuptools]
+packages = ["finops_agent", "finops_demo_data"]
+package-dir = { finops_agent = "src/finops_agent", finops_demo_data = "data" }
+
+[tool.setuptools.package-data]
+finops_demo_data = ["*.json", "*.ndjson"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

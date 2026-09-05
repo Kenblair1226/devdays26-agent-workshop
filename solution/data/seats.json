@@ -1,0 +1,18 @@
+{
+  "organization": "octo-demo",
+  "as_of": "2026-09-03T23:59:59Z",
+  "monthly_seat_price": 19,
+  "currency": "USD",
+  "seats": [
+    {"user":"alice","plan_type":"business","status":"active","last_activity_at":"2026-09-03T14:20:00Z"},
+    {"user":"bob","plan_type":"business","status":"active","last_activity_at":"2026-09-03T09:15:00Z"},
+    {"user":"carol","plan_type":"business","status":"active","last_activity_at":"2026-09-03T18:05:00Z"},
+    {"user":"dave","plan_type":"business","status":"active","last_activity_at":"2026-09-03T17:40:00Z"},
+    {"user":"erin","plan_type":"business","status":"active","last_activity_at":"2026-09-03T15:10:00Z"},
+    {"user":"frank","plan_type":"business","status":"active","last_activity_at":"2026-09-02T16:30:00Z"},
+    {"user":"grace","plan_type":"business","status":"active","last_activity_at":"2026-09-03T19:22:00Z"},
+    {"user":"heidi","plan_type":"business","status":"active","last_activity_at":"2026-08-25T08:11:00Z"},
+    {"user":"ivan","plan_type":"business","status":"active","last_activity_at":"2026-08-12T07:45:00Z"},
+    {"user":"judy","plan_type":"business","status":"active","last_activity_at":null}
+  ]
+}

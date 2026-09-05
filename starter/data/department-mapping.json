@@ -1,0 +1,14 @@
+{
+  "as_of": "2026-09-03T23:59:59Z",
+  "attribution_order": ["cost_center", "department_mapping", "Unallocated"],
+  "users": [
+    {"user":"alice","department":"Platform Engineering","cost_center":"CC-PLATFORM"},
+    {"user":"bob","department":"Platform Engineering","cost_center":"CC-PLATFORM"},
+    {"user":"carol","department":"AI Lab","cost_center":"CC-AI"},
+    {"user":"dave","department":"AI Lab","cost_center":"CC-AI"},
+    {"user":"erin","department":"Mobile","cost_center":"CC-MOBILE"},
+    {"user":"frank","department":"Mobile","cost_center":"CC-MOBILE"},
+    {"user":"grace","department":"Security","cost_center":"CC-SECURITY"},
+    {"user":"heidi","department":"Security","cost_center":"CC-SECURITY"}
+  ]
+}

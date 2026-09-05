@@ -1,0 +1,20 @@
+{
+  "time_period": {"year": 2026, "month": 9},
+  "organization": "octo-demo",
+  "as_of": "2026-09-03T23:59:59Z",
+  "currency": "USD",
+  "usage_items": [
+    {"date":"2026-09-01","user":"alice","product":"copilot","sku":"ai_credits","model":"gpt-5.4","unit_type":"AI credits","price_per_unit":0.01,"gross_quantity":320,"gross_amount":3.2,"discount_quantity":0,"discount_amount":0,"net_quantity":320,"net_amount":3.2},
+    {"date":"2026-09-02","user":"alice","product":"copilot","sku":"ai_credits","model":"gpt-5.4","unit_type":"AI credits","price_per_unit":0.01,"gross_quantity":210,"gross_amount":2.1,"discount_quantity":0,"discount_amount":0,"net_quantity":210,"net_amount":2.1},
+    {"date":"2026-09-03","user":"bob","product":"copilot","sku":"ai_credits","model":"gpt-5-mini","unit_type":"AI credits","price_per_unit":0.006,"gross_quantity":310,"gross_amount":1.86,"discount_quantity":40,"discount_amount":0.24,"net_quantity":270,"net_amount":1.62},
+    {"date":"2026-09-01","user":"carol","product":"copilot","sku":"ai_credits","model":"gpt-5.4","unit_type":"AI credits","price_per_unit":0.01,"gross_quantity":850,"gross_amount":8.5,"discount_quantity":0,"discount_amount":0,"net_quantity":850,"net_amount":8.5},
+    {"date":"2026-09-02","user":"carol","product":"copilot","sku":"ai_credits","model":"gpt-5.4","unit_type":"AI credits","price_per_unit":0.01,"gross_quantity":550,"gross_amount":5.5,"discount_quantity":0,"discount_amount":0,"net_quantity":550,"net_amount":5.5},
+    {"date":"2026-09-03","user":"dave","product":"copilot","sku":"ai_credits","model":"claude-opus-5","unit_type":"AI credits","price_per_unit":0.012,"gross_quantity":1100,"gross_amount":13.2,"discount_quantity":100,"discount_amount":1.2,"net_quantity":1000,"net_amount":12},
+    {"date":"2026-09-01","user":"erin","product":"copilot","sku":"ai_credits","model":"gpt-5-mini","unit_type":"AI credits","price_per_unit":0.006,"gross_quantity":420,"gross_amount":2.52,"discount_quantity":0,"discount_amount":0,"net_quantity":420,"net_amount":2.52},
+    {"date":"2026-09-02","user":"frank","product":"copilot","sku":"ai_credits","model":"gpt-5-mini","unit_type":"AI credits","price_per_unit":0.006,"gross_quantity":280,"gross_amount":1.68,"discount_quantity":0,"discount_amount":0,"net_quantity":280,"net_amount":1.68},
+    {"date":"2026-09-01","user":"grace","product":"copilot","sku":"ai_credits","model":"gpt-5.4","unit_type":"AI credits","price_per_unit":0.01,"gross_quantity":650,"gross_amount":6.5,"discount_quantity":0,"discount_amount":0,"net_quantity":650,"net_amount":6.5},
+    {"date":"2026-09-03","user":"heidi","product":"copilot","sku":"ai_credits","model":"gpt-5-mini","unit_type":"AI credits","price_per_unit":0.006,"gross_quantity":120,"gross_amount":0.72,"discount_quantity":0,"discount_amount":0,"net_quantity":120,"net_amount":0.72},
+    {"date":"2026-09-02","user":"ivan","product":"copilot","sku":"ai_credits","model":"gpt-5-mini","unit_type":"AI credits","price_per_unit":0.006,"gross_quantity":90,"gross_amount":0.54,"discount_quantity":0,"discount_amount":0,"net_quantity":90,"net_amount":0.54},
+    {"date":"2026-08-31","user":"carol","product":"copilot","sku":"ai_credits","model":"gpt-5.4","unit_type":"AI credits","price_per_unit":0.01,"gross_quantity":300,"gross_amount":3,"discount_quantity":0,"discount_amount":0,"net_quantity":300,"net_amount":3}
+  ]
+}

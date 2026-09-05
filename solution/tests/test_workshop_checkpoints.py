@@ -1,0 +1,64 @@
+import importlib.util
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+
+def test_recovery_preserves_edits_and_completes_all_three_labs(tmp_path) -> None:
+    root = Path(__file__).parents[2]
+    for project in ("starter", "solution"):
+        for folder in ("src", "data"):
+            shutil.copytree(
+                root / project / folder,
+                tmp_path / project / folder,
+                ignore=shutil.ignore_patterns("__pycache__"),
+            )
+    shutil.copytree(root / "starter" / "checks", tmp_path / "starter" / "checks")
+    shutil.copy2(root / "starter" / "main.py", tmp_path / "starter" / "main.py")
+    spec = importlib.util.spec_from_file_location(
+        "checkpoint", root / "scripts" / "checkpoint.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    original = (
+        tmp_path / "starter" / "src" / "finops_agent" / "analytics.py"
+    ).read_text(encoding="utf-8")
+    module.restore_checkpoint(tmp_path, "all")
+    backups = list((tmp_path / ".workshop-backups").glob("*/analytics.py"))
+    assert len(backups) == 1
+    assert backups[0].read_text(encoding="utf-8") == original
+    env = dict(os.environ, FINOPS_BACKEND="mock", OTEL_SDK_DISABLED="true")
+    env.pop("FINOPS_DATA_DIR", None)
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", str(tmp_path / "starter" / "checks"), "-q"],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_deployment_fixtures_equal_the_workshop_data() -> None:
+    root = Path(__file__).parents[2]
+    for path in (root / "data").glob("*.json"):
+        expected = json.loads(path.read_text(encoding="utf-8"))
+        for project in ("starter", "solution"):
+            actual = json.loads(
+                (root / project / "data" / path.name).read_text(encoding="utf-8")
+            )
+            assert actual == expected, (project, path.name)
+
+
+def test_shared_starter_code_uses_the_solution_interfaces() -> None:
+    root = Path(__file__).parents[2]
+    exercise_files = {"analytics.py", "instructions.py", "sdk_tools.py"}
+    for source in (root / "solution" / "src" / "finops_agent").glob("*.py"):
+        if source.name not in exercise_files:
+            starter = root / "starter" / "src" / "finops_agent" / source.name
+            assert starter.read_bytes() == source.read_bytes(), source.name
