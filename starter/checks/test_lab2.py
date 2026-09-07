@@ -3,55 +3,41 @@ import json
 
 from copilot.tools import ToolInvocation
 
+from finops_agent.budget_demo import BudgetDemo
 from finops_agent.clients import MockGitHubFinOpsClient
-from finops_agent.instructions import FINOPS_AGENT_INSTRUCTIONS
-from finops_agent.sdk_tools import build_sdk_tools
+from finops_agent.demo_connection import build_demo_harness
+from finops_agent.harness import CopilotFinOpsHarness
 from finops_agent.tools import FinOpsToolbox
 
 
 def test_lab2_harness_checkpoint() -> None:
-    sdk_tools = build_sdk_tools(FinOpsToolbox(MockGitHubFinOpsClient()))
-    names = {tool.name for tool in sdk_tools}
-
-    assert {
-        "get_cost_summary",
-        "rank_department_consumption",
-        "break_down_usage",
-        "recommend_optimizations",
-        "plan_action",
-        "execute_approved_action",
-        "get_audit_log",
-    } <= names
-    assert "TODO(Lab 2)" not in FINOPS_AGENT_INSTRUCTIONS
-    assert "approve_action" not in names
+    service = BudgetDemo(FinOpsToolbox(MockGitHubFinOpsClient()))
+    harness = build_demo_harness(service)
+    assert isinstance(harness, CopilotFinOpsHarness)
+    assert harness.toolbox is service.toolbox
+    tools = {tool.name: tool for tool in harness._custom_tools}
+    assert set(tools) == {
+        "get_my_costs",
+        "get_my_savings",
+        "request_budget_increase",
+    }
+    assert "administrator" in harness.instructions
 
     async def exercise():
-        definitions = {tool.name: tool for tool in sdk_tools}
-        cost = await definitions["get_cost_summary"].handler(
-            ToolInvocation(arguments={})
+        costs = await tools["get_my_costs"].handler(ToolInvocation(arguments={}))
+        profile = json.loads(costs.text_result_for_llm)
+        assert profile["user"] == "carol"
+        assert profile["billing"]["net_amount"] == 14
+        assert profile["budget"]["budget_amount"] == 20
+        pending = await tools["request_budget_increase"].handler(
+            ToolInvocation(arguments={"new_limit": 30, "reason": "Migration project"})
         )
-        assert json.loads(cost.text_result_for_llm)["net_quantity"] == 4760
-        rank = await definitions["rank_department_consumption"].handler(
-            ToolInvocation(arguments={})
-        )
-        assert (
-            json.loads(rank.text_result_for_llm)["ranking"][0]["department"] == "AI Lab"
-        )
-        plan = await definitions["plan_action"].handler(
-            ToolInvocation(
-                arguments={
-                    "kind": "remove_seats",
-                    "target": "octo-demo",
-                    "payload": {"selected_usernames": ["judy"]},
-                }
-            )
-        )
-        plan_id = json.loads(plan.text_result_for_llm)["plan_id"]
-        denied = await definitions["execute_approved_action"].handler(
-            ToolInvocation(
-                arguments={"plan_id": plan_id, "approval_token": "no-approval"}
-            )
-        )
-        assert denied.result_type == "failure"
+        request = json.loads(pending.text_result_for_llm)
+        assert request["status"] == "pending"
+        assert service.profile()["budget"]["remaining_amount"] == 6
+        service.approve(request["id"], confirmed=True)
+        assert service.profile()["budget"]["budget_amount"] == 30
+        assert service.profile()["budget"]["consumed_amount"] == 14
+        assert service.profile()["budget"]["remaining_amount"] == 16
 
     asyncio.run(exercise())

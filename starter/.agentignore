@@ -13,6 +13,7 @@ dist/
 .venv/
 .venv*/
 tests/
+workshop-output/
 checks/
 checkpoints/
 __pycache__/

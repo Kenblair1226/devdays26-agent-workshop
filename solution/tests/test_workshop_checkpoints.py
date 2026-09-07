@@ -24,11 +24,12 @@ def test_recovery_preserves_edits_and_completes_all_three_labs(tmp_path) -> None
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    original = (
-        tmp_path / "starter" / "src" / "finops_agent" / "analytics.py"
-    ).read_text(encoding="utf-8")
+    learner_file = tmp_path / "starter" / "src" / "finops_agent" / "demo_connection.py"
+    original = learner_file.read_text(encoding="utf-8")
+    assert module.restore_checkpoint(tmp_path, "1") == []
+    assert not (tmp_path / ".workshop-backups").exists()
     module.restore_checkpoint(tmp_path, "all")
-    backups = list((tmp_path / ".workshop-backups").glob("*/analytics.py"))
+    backups = list((tmp_path / ".workshop-backups").glob("*/demo_connection.py"))
     assert len(backups) == 1
     assert backups[0].read_text(encoding="utf-8") == original
     env = dict(os.environ, FINOPS_BACKEND="mock", OTEL_SDK_DISABLED="true")
@@ -57,8 +58,11 @@ def test_deployment_fixtures_equal_the_workshop_data() -> None:
 
 def test_shared_starter_code_uses_the_solution_interfaces() -> None:
     root = Path(__file__).parents[2]
-    exercise_files = {"analytics.py", "instructions.py", "sdk_tools.py"}
+    exercise_files = {"demo_connection.py"}
     for source in (root / "solution" / "src" / "finops_agent").glob("*.py"):
         if source.name not in exercise_files:
             starter = root / "starter" / "src" / "finops_agent" / source.name
             assert starter.read_bytes() == source.read_bytes(), source.name
+    source_html = root / "solution" / "src" / "finops_agent" / "demo.html"
+    starter_html = root / "starter" / "src" / "finops_agent" / "demo.html"
+    assert source_html.read_bytes() == starter_html.read_bytes()

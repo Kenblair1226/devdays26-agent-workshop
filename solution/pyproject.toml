@@ -12,6 +12,8 @@ dependencies = [
   "azure-identity>=1.17,<2",
   "github-copilot-sdk==1.0.11",
   "python-dotenv==1.1.1",
+  "starlette>=0.47,<2",
+  "hypercorn>=0.17,<0.19",
 ]
 
 [project.optional-dependencies]
@@ -29,6 +31,7 @@ package-dir = { finops_agent = "src/finops_agent", finops_demo_data = "data" }
 
 [tool.setuptools.package-data]
 finops_demo_data = ["*.json", "*.ndjson"]
+finops_agent = ["demo.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

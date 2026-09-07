@@ -54,6 +54,17 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("chat", help="Multi-turn chat with human approval commands")
     subparsers.add_parser("seats")
     subparsers.add_parser("budgets")
+    demo = subparsers.add_parser("demo", help="Start the local user/admin budget demo")
+    demo.add_argument("--port", type=int, default=8098)
+    demo.add_argument("--user", default="carol", help="Bound mock user (default carol)")
+    brief = subparsers.add_parser(
+        "brief", help="Collect mock FinOps evidence for analysis in Copilot Chat"
+    )
+    brief.add_argument(
+        "--output",
+        type=Path,
+        help="Write a new UTF-8 JSON file; never overwrite an existing file.",
+    )
 
     approval = subparsers.add_parser("approval-demo")
     approval.add_argument("--action", choices=["seat", "budget"], default="seat")
@@ -72,11 +83,17 @@ def main() -> None:
         from dotenv import load_dotenv
 
         load_dotenv(env_path, override=False)
-    if (
-        os.getenv("FINOPS_BACKEND", "mock") != "mock"
-        and args.command != "approval-demo"
-        and not args.instructor
-    ):
+    backend = os.getenv("FINOPS_BACKEND", "mock").lower()
+    if args.command == "demo":
+        if backend != "mock" or args.instructor or args.data_dir is not None:
+            raise ValueError("demo uses bundled mock data only; no instructor backend")
+        from .demo_server import run_demo
+
+        run_demo(port=args.port, user=args.user)
+        return
+    if args.command == "brief" and backend != "mock":
+        raise ValueError("brief is mock-only; set FINOPS_BACKEND=mock")
+    if backend != "mock" and args.command != "approval-demo" and not args.instructor:
         raise ValueError("real GitHub access requires the --instructor option")
     client = (
         MockGitHubFinOpsClient(args.data_dir)
@@ -99,6 +116,17 @@ def main() -> None:
         result = toolbox.list_seats()
     elif args.command == "budgets":
         result = toolbox.list_budgets()
+    elif args.command == "brief":
+        from .brief import build_analysis_brief
+
+        result = build_analysis_brief(toolbox)
+        if args.output is not None:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            with args.output.open("x", encoding="utf-8") as handle:
+                json.dump(result, handle, ensure_ascii=False, indent=2, allow_nan=False)
+                handle.write("\n")
+            print(f"Mock analysis brief written to {args.output}")
+            return
     elif args.command == "approval-demo":
         result = _run_approval_demo(toolbox, action=args.action, rehearse=args.rehearse)
     elif args.command == "chat":

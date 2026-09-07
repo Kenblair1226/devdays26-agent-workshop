@@ -1,26 +1,34 @@
 # 學員手冊：打造 Copilot FinOps Agent
 
-**90 分鐘，3 個 Labs。** 你會先建立本機 FinOps tools，再把 tools 接入 Copilot SDK，最後視環境狀況部署到 Foundry。學員只編輯 `starter/`；`solution/` 是答案。
+接下來的 **90 分鐘，我們一起做 3 個 Labs**：先用 GitHub Copilot Chat 看懂費用資料，再接上 Copilot SDK，試試「使用者申請額度、管理者核准」，最後把 Agent 放到 Foundry 上跑。
 
-## 情境與成果
+不用擔心要從零開始寫程式：**Lab 1 的工具都準備好了；Lab 2 只補幾行 SDK 接線**。需要參考時，可以看 `solution/` 裡的完整版本。
 
-你是虛構組織 `octo-demo` 的平台工程師。主管問：「本月至今，哪個部門消耗最多 AI credits？主要花在哪些模型？可以怎麼節省？」
+## 今天要解決什麼問題？
 
-完成後，你的 Agent 能查費用、分部門與模型分析、提出有依據的建議，並把 seat / budget 變更交給人核准。**本機程式不等於離線 LLM**：Lab 1 不需認證；Lab 2 的模型問答需要個人 Copilot 使用權限或主辦方 BYOK，但不需要 Foundry hosting 資源。
+想像你是虛構組織 `octo-demo` 的平台工程師，主管突然問：
 
-| 時間 | 活動 | 完成證據 |
+> 「這個月哪個部門用了最多 AI credits？主要花在哪些模型？有沒有節省的空間？」
+
+我們會讓 Agent 幫忙查資料、找出值得注意的地方，再提出建議。遇到 seat 或 budget 的調整，則由人來決定要不要核准。
+
+先提醒一下：**程式在本機跑，不代表模型也離線運作。** Lab 1 的報表工具不需認證，但 Copilot Chat 需要在 VS Code 登入有權限的 GitHub 帳號；Lab 2 的 SDK 聊天另需 Copilot token 或主辦方提供的 BYOK。前兩個 Lab 都不用先準備 Foundry hosting 資源。
+
+| 時間 | 要做什麼 | 做完會看到什麼 |
 | --- | --- | --- |
 | 0–8 分 | 情境、架構與安全界線 | 分辨 model runtime、tools、hosting |
 | 8–15 分 | 啟動課前環境 | 本機 `cost` 成功 |
-| 15–37 分 | Lab 1：FinOps tools | 部門排行含未歸屬用量 |
-| 37–63 分 | Lab 2：Copilot SDK harness | 自然語言問答與人工核准 |
+| 15–37 分 | Lab 1：用 Copilot 做 FinOps 調查 | 一頁有數據依據的決策摘要 |
+| 37–63 分 | Lab 2：使用者／管理者 demo | 查費用、節省建議、提高限額、核准後更新 |
 | 63–78 分 | Lab 3：Foundry | 自行部署或觀摩同一程式的 demo |
 | 78–86 分 | 講師延伸示範與討論 | 資料、權限、觀測的限制 |
 | 86–90 分 | 成果核對、清理 | 關閉程序、移除認證 |
 
-## 開始前
+## 先把環境開起來
 
-先完成 [環境準備](environment-prep.md)。以下命令從 **repository root** 執行。PowerShell 使用 `\`；bash 使用 `/`。不要在同一個 Python process 混載 starter 與 solution。
+如果還沒做過，先照 [環境準備](environment-prep.md) 完成安裝。接著在 **repo 根目錄，也就是看得到 `starter/` 和 `solution/` 的地方**，開啟終端。
+
+下面分成 PowerShell 和 bash，選你正在使用的那一組就好。練習時都用 `starter/`，不要在同一個 Python 程序裡混用兩個版本。
 
 PowerShell 7：
 
@@ -40,149 +48,181 @@ export FINOPS_BACKEND=mock
 python -m finops_agent --data-dir data cost
 ```
 
-範例固定在 **2026-09-03 UTC** 的 snapshot；`month_to_date` 是 9 月 1–3 日，不是你執行當天。應看到 `net_quantity=4760`、`net_amount=44.88`、`currency=USD`。這些是**合成教學數字**，不是正式 GitHub 價格、invoice 或原始 token 數。
+看到 `net_quantity=4760`、`net_amount=44.88`、`currency=USD`，就表示資料讀進來了。
 
-## Lab 1：建立 FinOps tools（22 分鐘）
+我們用的是 **2026-09-03 UTC** 的範例快照，所以這裡的 `month_to_date` 指 9 月 1–3 日，不是你上課當天。這些都是**合成教學數字**，別把它當成正式 GitHub 價格、帳單或原始 token 數。
 
-### 1. 看懂資料來源（4 分鐘）
+## Lab 1：用 GitHub Copilot 做 FinOps 調查（22 分鐘，免寫程式）
 
-閱讀 `data/ai-credit-usage.json`、`data/department-mapping.json` 與 `data/users-28-day.ndjson`。
+這一段先不寫程式。我們直接拿準備好的工具和資料，請 Copilot 幫忙回答三件事：**錢花在哪裡、預算合不合理、接下來該做什麼**。全程使用 mock 資料，不需要真實 organization 的權限。
 
-| 資料 | 可回答 | 不能直接推論 |
-| --- | --- | --- |
-| Billing snapshot | 本期 gross/net credits 與金額 | Prompt token 明細、最終 invoice |
-| 已解析的部門 mapping | 使用者歸屬與部門排行 | GitHub team 自動等於財務部門 |
-| Usage metrics | 採用情形與可改善的假設 | 員工生產力、保證節省百分比 |
-| Seats / budgets | 指派、預算與限制 | 沒有 activity 就一定沒有使用 |
+### 1. 先準備要交給 Copilot 的資料（3 分鐘）
 
-財務部門由主辦方預先解析 cost center 或明確 mapping；多個 team 不重複加總。未能歸屬的資料留在 `Unallocated`。
-
-### 2. 先看到未完成的 checkpoint（2 分鐘）
+工具已經寫好了，不用改 `analytics.py`。確認 `FINOPS_BACKEND=mock`，跑下面兩個命令，產生分析用的 JSON 並檢查工具是否正常：
 
 ```powershell
+python -m finops_agent brief --output .\workshop-output\lab1-evidence.json
 python -m pytest .\starter\checks\test_lab1.py -q
 ```
 
-bash 把路徑改成 `starter/checks/test_lab1.py`。未完成時應失敗，這不是環境故障。
+bash：
 
-### 3. 完成部門 aggregation（10 分鐘）
-
-編輯 `starter/src/finops_agent/analytics.py`，找到 `TODO(Lab 1)` 的 `rank_departments()`。它接收已解析的 `ReportingPeriod`，你只需聚合，不必呼叫網路。
-
-1. 用 `self._records(period)` 取得該期間的資料。
-2. 用既有 `self._department(item)` 決定歸屬；它處理大小寫、unknown user 與 residual。
-3. 累加 `net_quantity`、`net_amount`，用 set 計算每部門不同使用者數；`user=None` 的 residual 不算一個人。
-4. 依用量遞減、部門名稱遞增排序，給予 1-based rank。
-5. 先從完整 rows 計算未歸屬用量，再回傳 `rows[:limit]`。
-6. 以 `**self._context()` 保留 `as_of`、`currency`、`unit` 和來源；另加 `period` 與歸屬限制。保留既有 `self._validate_limit(limit)`。
-
-可讓 Copilot 協助，但先把限制寫清楚：
-
-> 完成 rank_departments，使用既有資料模型與 period 篩選；不得呼叫網路、不得丟棄 Unallocated，且不可把同一使用者在同部門的多筆資料算成多個人。先閱讀 test_lab1 的預期，再解釋演算法。
-
-參考答案是 `solution/src/finops_agent/analytics.py` 的同名方法；介面保持一致。不要讓 Copilot 把測試改成接受錯誤答案。
-
-### 4. 檢視結果與其他 tools（6 分鐘）
-
-```powershell
-python -m pytest .\starter\checks\test_lab1.py -q
-python -m finops_agent departments
-python -m finops_agent breakdown --dimension model
-python -m finops_agent forecast 80
-python -m finops_agent budgets
+```bash
+python -m finops_agent brief --output workshop-output/lab1-evidence.json
+python -m pytest starter/checks/test_lab1.py -q
 ```
 
-| Checkpoint | 預期 |
+這個 checkpoint **不需要改程式就應該通過**。它只能告訴你工具和資料沒問題，Copilot 等一下的回答還是要自己核對。
+
+如果檔案已經存在，換個名字，例如 `lab1-evidence-v2.json`，再跑一次；工具不會覆蓋舊檔。`brief` 只是把 mock 資料整理起來，不會呼叫模型、建立變更計畫或修改 seats。
+
+打開 JSON，可以先認識這幾個 section，不用逐行讀完：
+
+| Section | 可以拿來看什麼 |
 | --- | --- |
-| MTD net credits / amount | 4,760 / USD 44.88 |
-| 部門第一名 | AI Lab，2,400 / USD 26 |
-| Unallocated | 90 credits |
-| 模型第一名 | gpt-5.4，2,580 credits |
-| `forecast 80` | 約 USD 448.80 的月末 run-rate 情境 |
+| `cost_summary`、`department_ranking` | 總用量、部門排行、Unallocated |
+| `model_breakdown`、`user_breakdown`、`leading_department_models` | 找出用量集中在哪些人／模型，深入第一名部門 |
+| `seat_inventory`、`optimization_hypotheses` | 閒置疑點、未知 activity、改善假設 |
+| `budget_review` | 各 budget 自己的 consumed、remaining、scope 與 hard stop |
+| `run_rate_scenario` | 給定 USD 80 情境的月末外推；不是實際預算餘額 |
 
-Forecast 是把短期平均外推的**假設**，不是保證花費，也不是把 license fees 加總後的總帳單。Budget 的 remaining 應看該 budget 自己的 `consumed_amount` 與 scope，不能拿另一個期間或另一個口徑硬減。
+### 2. 請 Copilot 找出成本熱點（5 分鐘）
 
-**思考題：** 沒有回傳某日資料，代表零花費還是資料不足？為何 credit 用量最高的部門不一定是浪費最多的部門？
+在 VS Code 開啟 **GitHub Copilot Chat**，選 **Ask** 模式，再把 `workshop-output/lab1-evidence.json` 加進附件或 context。
 
-## Lab 2：整合 Copilot SDK harness（26 分鐘）
+只附這份合成資料就夠了，**不要附 `.env`、公司報表或 admin token，也不用整個 repo 都丟進去**。這時 Copilot 是在讀你給它的報表，還沒有接到我們的 SDK harness。
 
-### 1. 理解 harness 與 tool contract（5 分鐘）
+先貼上這段試試：
 
-閱讀 `starter/src/finops_agent/harness.py` 和 `sdk_tools.py`。真正的流程是：
+> 你是 FinOps 分析師，只依據附件，不修改程式、不呼叫外部 API、不執行管理動作。
+> 先告訴我這份資料涵蓋哪段時間、as_of 是什麼、金額和用量各用什麼單位，以及資料有哪些限制。
+> 這個月哪個部門用了最多 net AI credits？它占全部 credits 和 net amount 各幾 %？
+> 再幫我看這個部門主要用了哪些模型。也比較一下 Platform Engineering 和 Security：credits 排名跟金額排名一樣嗎？
+> 每個結論都附上對應的 JSON section、欄位和計算式。記得保留 Unallocated，也別直接把高用量當成浪費。
 
-```text
-你的問題 -> Copilot SDK session -> 模型選擇 custom tool
-        -> Python handler -> 結構化 evidence -> 模型回答
-```
+看完回答，別急著全盤接受。跑 `python -m finops_agent departments` 或 `python -m finops_agent breakdown --dimension model`，對照一下數字。如果某句話看不出依據，就追問：「哪個欄位支持這個結論？」
 
-`CopilotClient(mode="empty")` 由 SDK 管理自己的 runtime；**不用 Docker、sidecar 或手動 `copilot --headless`**。`available_tools` 是明確 allowlist，未知工具與 shell / 檔案操作不在授權範圍。`approve_action` 永遠不交給模型。
+### 3. 預算合理嗎？哪些 seats 真的該回收？（6 分鐘）
 
-### 2. 完成 instructions 與兩個 registrations（9 分鐘）
+留在**同一段 Chat**，接著問：
 
-執行 `python -m pytest starter/checks/test_lab2.py -q`，先看到失敗。
+> 再幫我檢查預算和 seats：
+> 1. 用 budget_review 裡每筆 consumed_amount 算出使用率和 remaining，比較 organization budget 和 carol 的 user budget。這些限制分別會影響誰？
+> 2. 為什麼不能把 run_rate_scenario 當成 organization budget 的真實餘額，或拿來斷言哪天一定超支？
+> 3. 有哪些人的 seat activity 太久沒更新，或根本不知道？請對照 user_breakdown 和使用紀錄，特別看 ivan 和 judy。
+> 請分成「已確認的事實／矛盾或不足的證據／還要問什麼／建議下一步」。先不要給我一份直接回收 seats 的名單。
 
-編輯 `starter/src/finops_agent/instructions.py` 的 `TODO(Lab 2)`，要求：
+這裡有個容易踩到的坑：activity 很舊，不代表這期完全沒用；`null` 也不等於「從未使用」。同樣地，找不到成本中心歸屬時，應該先補資料，不能隨便塞到某個部門，或乾脆不算那筆用量。
 
-- 所有費用與帳號數字必須引用 tools；缺資料就說明限制。
-- 回答包含 period、as-of 或 retrieved-at、currency/unit；不把 snapshot 說成即時。
-- 區分 AI credits、原始 tokens、USD、license fees 與 Azure inference 費用。
-- 最佳化建議要有 evidence、假設與品質衡量方式，不保證節省比例。
-- Agent 只能先提出 plan；核准必須來自模型之外的人。
+### 4. 比較兩個節省方案（4 分鐘）
 
-接著在 `starter/src/finops_agent/sdk_tools.py` 的兩個 `TODO(Lab 2)` 補上 `rank_department_consumption`、`plan_action`。其餘工具與 schema helpers 已提供。
+接著做個 what-if，看看不同做法可能帶來什麼影響：
+
+> 幫我比較兩個方案，並把假設寫清楚：
+> A. 假設 AI Lab 透過縮小 context 和模型 routing 實驗，讓「相同資料期間」的 net amount 降低 10%，差額會是多少？
+> B. 假設主管另外確認，下個月可以回收 1 個 seat，以教學假設月費 USD 19 來算，下個月的 license fee 可以少多少？
+> 請分別列出時間範圍、計算式、品質或可用性風險，以及需要誰核准。不要把不同期間的金額直接加成總節省，也不要把 credits 換算成 tokens。
+> 如果要談 ROI，還缺哪些導入成本和效益資料？code acceptance rate 不能直接當作投資報酬率。
+
+記得，這只是**「如果這樣做，可能會怎樣」的估算**，不是已經省下來的錢。便宜模型能不能完成任務、品質有沒有下降、credit pool 會不會受影響，都要一起考慮。
+
+### 5. 整理成一頁，準備拿給主管看（4 分鐘）
+
+最後請 Copilot 幫你整理：
+
+> 幫我把剛才的分析整理成一頁繁體中文 FinOps 決策摘要，包含：
+> - 3 個發現：附資料來源 section、數字、期間和限制。
+> - 2 個優先行動：說明依據、預期影響、風險、誰負責、誰核准，以及下次怎麼看成效。事實和假設請分開寫。
+> - 1 個「現在先不做」的動作，並說明原因。
+> - 一筆待核准的調整建議，例如 carol 的 user budget，寫出目前值 → 建議值、理由和 hard-stop 設定。只提議，不要真的執行。
+
+自己讀一遍、修正不合理的地方，再存成 `workshop-output/finops-review.md`。這份就是你這一段的成果；目錄已被 Git 忽略，不會自動進入版本控制。
+
+**Checkpoint 1：做到這裡就算完成。** 你能說明「錢花在哪裡、接下來想做什麼、哪些事還不能決定」，並拿出一次跨表比對、兩個有來源的行動，以及一個先不做的理由。答案不用和別人一模一樣，重點是你能講清楚依據；測試通過不能取代這份摘要。
+
+**接著進 Lab 2。** 剛才是你手動準備資料、附檔、追問。下一段把模型和工具接起來，讓 Agent 自己查資料，再試一次「提出申請 → 管理者核准」。
+
+## Lab 2：接上 SDK，體驗申請與管理者核准（26 分鐘）
+
+這次換你扮演 **carol**：你想知道自己花了多少、有沒有節省空間，也想為下週專案提高額度。請另一位同學或講師當管理者，兩個人用同一台電腦的不同分頁操作。
+
+這是本機 mock 角色演示，**不是正式的 SSO 登入或 RBAC 權限系統**，資料也不會寫到真實 GitHub。
+
+### 1. 補幾行，把 SDK 接上來（6 分鐘）
+
+工具、提示詞、畫面和核准邏輯都準備好了。打開 `starter/src/finops_agent/demo_connection.py`，找到 `build_demo_harness()`，把 TODO 換成：
 
 ```python
-_tool(
-    "rank_department_consumption",
-    "Rank departments by AI-credit consumption.",
-    period_schema,
-    lambda args: toolbox.rank_department_consumption(**args),
-),
+return CopilotFinOpsHarness(
+    service.toolbox,
+    custom_tools=service.user_tools(),
+    instructions=USER_INSTRUCTIONS,
+)
 ```
 
-`plan_action` 的參數為 `kind`、`target`、`payload`；kind 僅允許 `assign_seats`、`remove_seats`、`create_budget`、`update_budget`。仿照 solution 的 schema，但**不加入核准工具、actor 或任意 shell 命令**。
+再補上 `from .budget_demo import USER_INSTRUCTIONS`，其他 imports 已經有了。跑 `python -m pytest starter/checks/test_lab2.py -q` 看看是否接對。**不用自己填多份 schema，也不用複製 UUID 或在聊天裡貼 approval token。**
 
-重跑 checkpoint。它除了檢查名字，也會呼叫 handler、核對資料與拒絕未核准的變更。
+這幾行做的事，就是把工具和提示詞交給 harness，讓它串起模型與工具。使用者能用的工具只有 `get_my_costs`、`get_my_savings`、`request_budget_increase`；帳號由伺服器決定，不會因為你在 prompt 說「我是 admin」就改變。模型也拿不到核准工具。
 
-### 3. 用自然語言查費用（5 分鐘）
+### 2. 開兩個分頁，一個當使用者、一個當管理者（4 分鐘）
 
-先完成 [Lab 2 認證](environment-prep.md#lab-2-模型認證)。模型使用個人 Copilot 或主辦方 BYOK；不要提供 org admin token。
+先照 [Lab 2 認證](environment-prep.md#lab-2-模型認證) 設好模型憑證。保留剛才的 `PYTHONPATH` 和 `FINOPS_BACKEND=mock`，然後跑：
 
 ```powershell
-python -m finops_agent ask "本月至今哪個部門消耗最多 AI credits？請附資料期間、來源與限制。"
-python -m finops_agent ask "分析模型用量，提供三個節省 context/token 的實驗建議，不要捏造節省百分比。"
+python -m finops_agent demo
 ```
 
-答案文字可能不同，但 evidence 應一致。建議可包括縮小任務、只提供相關 context、任務切換時開新 session、用低成本模型處理簡單任務，並以品質／完成率衡量。現有報表沒有原始 token 明細，不能從 credits 直接換算 tokens。
+bash 也是同一個命令。終端會出現兩個 `http://127.0.0.1:8098/` 連結，分別帶有這次啟動專用的角色存取碼。把 **User** 和 **Admin** 開在兩個分頁，並排看最清楚。
 
-### 4. 人工核准 seat / budget（7 分鐘）
+User 由使用者操作，Admin 由管理者保管。**不要把 admin link 交給使用者或截圖分享**；持有它就能操作這次 demo 的管理者功能。重啟後，舊連結就不能用了。如果 port 被占用，改跑 `python -m finops_agent demo --port 8099`。
 
-```powershell
-python -m finops_agent chat
-```
+先看一下 User 頁面：carol 本期應該用了 **1,400 net AI credits / USD 14**，限額 **USD 20**、已用 **14**、剩餘 **6**。這裡只看 carol，不是 Lab 1 的全組織金額 44.88；用量仍是範例快照，不是即時帳務。
 
-在同一個 chat 中依序操作：
+### 3. 先問「我花了多少？」再問「怎麼省？」（5 分鐘）
 
-1. 輸入：「請規劃把 judy 的 seat 設為 pending cancellation，先不要執行。」
-2. 輸入 `/plans`，取得 plan ID 並檢視目標、payload。
-3. 輸入 `/approve PLAN_ID`，先輸入 `no`；確認狀態仍未核准。
-4. 再輸入 `/approve PLAN_ID`，確認內容後依提示輸入完整 `APPROVE PLAN_ID`。
-5. 輸入 `/audit`，再問：「重新列出 seats，judy 現在是什麼狀態？」
-6. 以「為 carol 建立 USD 30 的 user AI-credit budget、hard stop=true」重複同一流程；最後 `/quit`。
+在 User 頁面按快捷問題，或自己輸入：
 
-`/approve` 是**本機 console 指令**，不是發給模型的 prompt。它先顯示完整 plan，才核准及執行；approval token 不送進模型、不列在 audit。Mock 狀態只在這個程序存活，不會影響 GitHub。
+> 我目前花費多少？額度還剩多少？
 
-若時間不足，可用無模型的 `python -m finops_agent approval-demo` 與 `approval-demo --action budget` 練習人工確認。`--rehearse` 僅供講師自動彩排，輸出明確標記 simulated；不能當真人核准證據。
+> 有什麼節省 AI credits 的建議？請附資料依據，不要直接降低我的額度。
 
-**Checkpoint 2：** Agent 能呼叫工具回答，未核准動作被拒絕，人確認後 mock 狀態改變且留下 audit；不是只看終端印出「success」。
+留意畫面上顯示了哪些工具名稱，再看看回答有沒有引用資料。SDK 會依問題選工具，但只能查目前使用者的範圍。節省建議可以是縮小 context、讓不同模型處理不同難度的任務，並比較品質；不能直接說「你已經省了多少 tokens」。
+
+### 4. 申請加額，再換管理者核准（8 分鐘）
+
+接著在 User 頁面說：
+
+> 請把我的每月限額提高到 USD 30，理由是下週有 migration 專案。
+
+模型會呼叫 `request_budget_increase`，畫面出現 **pending（待核准）**。先停一下，看看數字：**限額應該還是 20，剩餘還是 6**。「申請送出」和「已經核准」是兩回事。
+
+現在換管理者操作另一個分頁。確認申請人是 carol、金額是 **20 → 30**，再看一下理由和提交時間。都沒問題後，點 **核准並套用 mock 額度**。這一步必須由人確認，模型不能自己核准。
+
+回到 User 頁面，等它自動更新成 **approved（已核准）**。這時限額應該是 **30**、已用 **14** 不變、剩餘 **16**。再問一次：「我的申請核准了嗎？現在可用額度是多少？」看看 Agent 是否真的重新查了資料，而不是重複剛才的答案。
+
+### 5. 確認整個流程真的跑完了（3 分鐘）
+
+| 階段 | 限額 | 已用 | 剩餘 | 狀態 |
+| --- | --- | --- | --- | --- |
+| 開始 | 20 | 14 | 6 | 尚未申請 |
+| 使用者申請 | 20 | 14 | 6 | pending |
+| 管理者核准 | 30 | 14 | 16 | approved |
+
+**Checkpoint 2：** 對照上表，確認你跑完了「提問 → 建議 → 申請 → 人核准 → 新限額」。管理者頁面的 audit 也應留下核准和執行紀錄。記住這幾條界線：使用者不能存取管理者 API、模型沒有 approve tool，同一筆申請重複核准也不能重複變更。
+
+頁面每三秒更新一次，只是在讀 mock 狀態，不會一直呼叫模型或消耗 model tokens。
+
+如果模型連不上，先別卡在這裡。可以改用畫面上的 **直接提交 mock 申請（不經模型）** 表單，繼續體驗待核准、核准和餘額更新。只是要說清楚：這是備援操作，不代表 SDK 聊天已經成功。重啟 demo 會清除申請並恢復範例額度；這組 UI 和核准 API 只在 localhost 使用，不會跟著 Lab 3 部署。
+
+想多玩一點，可以課後再看 `chat` 的 `/plans`、`/approve` 和 seat 管理；今天不用把這些全部做完。
 
 ## Lab 3：部署到 Foundry Agent Service（15 分鐘，可改 Demo）
 
-第 63 分鐘由講師宣布 hands-on 或 demo。若沒有預建資源、時間不足或部署等候超過 5 分鐘，**不要現場建立 Azure 基礎設施**，改看講師既有環境。
+到了第 63 分鐘，先聽講師說明：環境準備好了就自己部署；如果資源還沒開、時間不夠，或部署等了超過 5 分鐘，就改看講師示範。**不用在現場從零建立 Azure 資源**，前兩個 Lab 的成果已經可以留在本機使用。
 
-### 1. 了解部署內容
+### 1. 看看這次會部署什麼
 
-`starter/azure.yaml` 的 agent service 使用：
+打開 `starter/azure.yaml`，找到這幾行：
 
 ```yaml
 host: azure.ai.agent
@@ -191,13 +231,13 @@ codeConfiguration:
   entryPoint: main.py
 ```
 
-`main.py` 的 `InvocationAgentServerHost` 接收 `{"input":"..."}`，直接呼叫同一個 SDK harness。Foundry 管理運算資源；沒有自訂 Dockerfile。模型採 `FINOPS_MODEL_PROVIDER=foundry-identity`，透過 Managed Identity 存取已部署模型。
+這表示我們直接交出 Python 程式，由 Foundry 負責執行，不用自己準備 Dockerfile。`main.py` 裡的 `InvocationAgentServerHost` 收到 `{"input":"..."}` 後，會呼叫同一個 SDK harness。模型設定使用 `FINOPS_MODEL_PROVIDER=foundry-identity`，透過 Managed Identity 存取已部署的模型。
 
-Hosted 範例為 **每次 invocation 獨立的 mock 問答／planning**，不共享聊天紀錄或核准狀態。人工核准與真實寫入留在本機講師流程，這不是 production approval service。
+有一點和 Lab 2 不同：這個 Hosted 範例的**每次請求都使用獨立的 mock 狀態**，不會共用聊天紀錄或核准結果。Lab 2 的管理者頁面不會一起上雲，也不要把它當成正式的核准服務。真實寫入仍只限講師的受控流程。
 
-### 2. 部署與呼叫
+### 2. 部署後，問它同一個問題
 
-確認主辦方已在你的 `starter/.azure/` 綁定**個人**環境，且前兩個 checkpoints 已完成。使用 repo 附的 `starter/request.example.json`，避免 PowerShell JSON quoting 與 BOM 問題。
+先確認主辦方已把你的**個人環境**綁定到 `starter/.azure/`，前兩個 checkpoints 也都完成了。這裡直接用附好的 `starter/request.example.json`，省去手動處理 JSON 引號和編碼的麻煩。
 
 PowerShell：
 
@@ -218,7 +258,7 @@ finally {
 }
 ```
 
-bash（subshell 結束即回原目錄）：
+bash（整段執行完會回到原目錄）：
 
 ```bash
 (
@@ -229,30 +269,35 @@ bash（subshell 結束即回原目錄）：
 )
 ```
 
-回應含 `reply`、`invocation_id`、`tool_calls`、`backend=mock`。對照 Lab 1 的數字；在 monitor 查看相同 invocation 的 tool 名稱。Monitor 預設取近期 console logs；`--follow` 才是持續串流。完整 distributed tracing 需課前另行配置，console logs 不等於完整模型 token trace。
+收到回應後，找找 `reply`、`invocation_id`、`tool_calls` 和 `backend=mock`。把答案和 Lab 1 的數字對照一下，再用 monitor 看同一次請求呼叫了哪些工具。
 
-### 3. Checkpoint 與切換 Demo
+Monitor 預設只取近期 console logs，想持續看才加 `--follow`。完整的 distributed tracing 要事先設定，別把 console logs 當成完整的模型 token trace。
 
-自行完成 deploy / invoke，或在講師 demo 中指出 source entry point、Managed Identity、tool call 與 evidence，皆符合 Lab 3 的教學目標。無資源時不要把本機結果宣稱為「已部署 Foundry」。
+### 3. 做到這裡就可以了
 
-## 落後時的 checkpoint recovery
+你可以自己完成部署和呼叫，也可以跟著講師示範，指出程式入口、Managed Identity、tool call 和資料依據。兩種方式都能學到這段的重點；如果這次沒有雲端資源，就把成果記為觀摩，不要把本機結果說成「已部署 Foundry」。
 
-從 repository root 執行，工具會先備份你的編輯到被 Git 忽略的 `.workshop-backups/`，只還原對應 lab 的檔案：
+## 跟不上時，先用參考答案接著做
+
+如果 Lab 2 卡住了，回到 repo 根目錄跑下面的命令。工具會先把你的編輯備份到 `.workshop-backups/`，再還原那個 Lab 的檔案：
 
 ```powershell
-python .\scripts\checkpoint.py --lab 1
 python .\scripts\checkpoint.py --lab 2
 python -m pytest .\starter\checks -q
 ```
 
-bash 使用 `python scripts/checkpoint.py --lab 1`。不刪整個工作目錄、不覆蓋 `.env`，也不需要清除自己的 Git 變更。
+bash 用 `python scripts/checkpoint.py --lab 2`。它不會刪掉工作目錄，也不會覆蓋 `.env` 或 `workshop-output/finops-review.md`。
 
-## 最後清理
+Lab 1 沒有 code TODO，不需要還原。時間不夠時，先整理出一個有依據的行動和一個「暫時不做」的決定，再跟上下一段就好。
 
-退出 chat、停止本機 host，清除 shell 認證；不要提交 `.env`、真實資料、runtime history 或 audit log。主辦方統一關閉 workshop Azure 資源；學員不要對共用 resource group 執行 `azd down`。
+## 離開前，花一分鐘收尾
+
+記得退出 chat、停止本機 demo／host，並清掉 shell 裡的認證。`.env`、真實資料、runtime history 和 audit log 都不要提交到 Git。
+
+Azure 資源會由主辦方統一關閉，**不要自行對共用 resource group 執行 `azd down`**。
 
 ```powershell
 Remove-Item Env:COPILOT_GITHUB_TOKEN,Env:FOUNDRY_API_KEY -ErrorAction SilentlyContinue
 ```
 
-bash：`unset COPILOT_GITHUB_TOKEN FOUNDRY_API_KEY`。若曾用課程專用短期 token，課後在 GitHub 撤銷。
+bash 用 `unset COPILOT_GITHUB_TOKEN FOUNDRY_API_KEY`。如果用了課程專用的短期 token，課後也到 GitHub 把它撤銷。

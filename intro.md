@@ -6,14 +6,14 @@
 
 本工作坊以 **GitHub Copilot FinOps agent** 為情境，帶領學員在 90 分鐘內完成 **剛好 3 個 Labs**：
 
-1. **Lab 1（local-only）**：編輯 `starter/src/finops_agent/analytics.py` 的 `TODO(Lab 1)`，完成 department aggregation 與 baseline analytics
-2. **Lab 2（local-only）**：編輯 `starter/src/finops_agent/instructions.py` 與 `starter/src/finops_agent/sdk_tools.py`，完成 Copilot SDK tool surface 與 mock governance flow
+1. **Lab 1（免寫程式）**：使用現成 FinOps tools 產生合成資料分析包，透過 GitHub Copilot Chat 調查成本、seat 與 budget，交付一頁決策摘要
+2. **Lab 2（local-only）**：只接上一個 Copilot SDK harness factory，使用者可詢問個人花費與節省建議、申請提高限額，管理者從另一個頁面核准
 3. **Lab 3（optional）**：從 `starter/` direct-code deploy 到 Microsoft Foundry Agent Service，進行 remote invoke 與 monitor；若環境不可用、部署過慢或時間不足，由講師 demo predeployed endpoint
 
 ### 課程重點
 
 - 了解 `starter/` 如何作為真正的 hands-on learner path
-- 使用 `data/` synthetic data 完成 FinOps analytics
+- 透過成本總覽、seat 使用檢視與預算分析情境，用合成資料比較節省方案
 - 練習 human-in-the-loop mock governance boundary
 - 了解 official Foundry direct-code shape：`azure.yaml` + `main.py` + `InvocationAgentServerHost`
 - 知道 `solution/` 是答案與 recovery，不是主要操作路徑
@@ -24,7 +24,8 @@
 - Python：**3.13**
 - 學員在 `starter/` 實作；`solution/` 用來比對，`scripts/checkpoint.py` 提供有備份的分階段 recovery
 - 建議課前先在 `starter/.venv` 安裝 `starter/requirements.txt`，並預先執行 `python -m copilot download-runtime`
-- Lab 2 的 deterministic checkpoint 與 tool wiring 是 local-only，但 **`ask` 需要 `COPILOT_GITHUB_TOKEN` 或 organizer BYOK**
+- Lab 1 的現成工具無需認證；Copilot Chat 分析需在 VS Code 登入有 Copilot 權限的 GitHub 帳號，不需 SDK token 或 Azure 資源
+- Lab 2 的頁面與 mock 核准可在本機執行；**SDK 聊天需要 `COPILOT_GITHUB_TOKEN` 或 organizer BYOK**，不需正式 org 權限或 SSO
 - Lab 3 優先使用主辦單位預配置的 Foundry model 與 Managed Identity，且 `starter/azure.yaml` 需要 **azd >= 1.27.1**
 - 不要使用 admin / billing token
 
@@ -55,16 +56,17 @@
 
 This 90-minute workshop has exactly three labs:
 
-1. **Lab 1 (local-only)**: implement the `TODO(Lab 1)` in `starter/src/finops_agent/analytics.py`
-2. **Lab 2 (local-only)**: replace the TODO rules in `starter/src/finops_agent/instructions.py` and register the missing SDK tools in `starter/src/finops_agent/sdk_tools.py`
+1. **Lab 1 (no coding)**: use ready-made local tools and GitHub Copilot Chat to investigate synthetic cost, seat, and budget data and produce a one-page decision brief
+2. **Lab 2 (local-only)**: connect one Copilot SDK harness factory; a user asks about spending and savings, requests a higher limit, and an administrator approves on a separate page
 3. **Lab 3 (optional)**: direct-code deploy the hosted agent from `starter/` to Microsoft Foundry Agent Service, then remotely invoke and monitor it; if resources or time are limited, the instructor demos a predeployed endpoint
 
 ### Highlights
 
 - `starter/` is the learner path
 - `solution/` is the answer / recovery path
+- Explore cost visibility, seat review, attribution, budgets, and conditional savings estimates with synthetic data; no additional platform installation required
 - Pre-event setup should install `starter/requirements.txt` into `starter/.venv` and pre-cache `python -m copilot download-runtime`
-- Labs 1 and 2 stay local, but the Lab 2 `ask` step requires Copilot auth or organizer BYOK
+- Lab 1 analysis uses signed-in VS Code Copilot Chat; Lab 2 uses the local SDK harness with Copilot auth or organizer BYOK. Neither requires Azure hosting
 - Lab 3 uses the official direct-code Foundry shape with `starter/azure.yaml`, `starter/main.py`, and `InvocationAgentServerHost`, and requires **azd >= 1.27.1**
 
 ### Prerequisites
@@ -72,7 +74,7 @@ This 90-minute workshop has exactly three labs:
 - Python **3.13**
 - GitHub account with GitHub Copilot access
 - Workshop repo with `starter/`, `solution/`, and `data/`
-- Copilot auth or organizer BYOK for the Lab 2 `ask` step
+- Copilot auth or organizer BYOK for the Lab 2 SDK chat; user/admin pages use local mock roles
 - A preprovisioned Foundry environment for Lab 3 hands-on
 
 ### Links

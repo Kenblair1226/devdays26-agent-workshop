@@ -13,6 +13,7 @@ dist/
 .venv/
 .venv*/
 tests/
+workshop-output/
 __pycache__/
 *.egg-info/
 *.py[cod]

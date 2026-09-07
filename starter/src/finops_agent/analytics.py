@@ -162,10 +162,50 @@ class FinOpsAnalyzer:
         self, period: ReportingPeriod, *, limit: int = 10
     ) -> dict[str, Any]:
         self._validate_limit(limit)
-        # TODO(Lab 1): Group self._records(period) via self._department(item).
-        # Sum net quantities/amounts; count distinct non-null users; sort and rank.
-        # Preserve self._context(), period, and the full Unallocated total.
-        raise NotImplementedError("Lab 1: implement department aggregation")
+        grouped: dict[str, dict[str, float]] = defaultdict(
+            lambda: {"net_quantity": 0.0, "net_amount": 0.0}
+        )
+        seen_users: dict[str, set[str]] = defaultdict(set)
+        for item in self._records(period):
+            department = self._department(item)
+            grouped[department]["net_quantity"] += item.net_quantity
+            grouped[department]["net_amount"] += item.net_amount
+            if item.user is not None:
+                seen_users[department].add(item.user)
+
+        rows = [
+            {
+                "rank": 0,
+                "department": department,
+                "net_quantity": round(values["net_quantity"], 2),
+                "net_amount": round(values["net_amount"], 2),
+                "user_count": len(seen_users[department]),
+            }
+            for department, values in grouped.items()
+        ]
+        rows.sort(key=lambda row: (-row["net_quantity"], row["department"]))
+        for index, row in enumerate(rows, start=1):
+            row["rank"] = index
+
+        return {
+            **self._context(),
+            "period": period.as_dict(),
+            "ranking": rows[:limit],
+            "attribution_method": (
+                "Resolved explicit cost-center/organizer mapping, matched by "
+                "case-insensitive login; no live cost-center lookup or team fan-out. "
+                "Unknown users and organization residual are Unallocated; residual "
+                "does not count as a user."
+            ),
+            "unallocated_quantity": next(
+                (
+                    row["net_quantity"]
+                    for row in rows
+                    if row["department"] == "Unallocated"
+                ),
+                0.0,
+            ),
+        }
 
     def usage_breakdown(
         self,

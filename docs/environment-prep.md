@@ -1,18 +1,20 @@
 # 環境準備與課前檢查
 
-學員約 40 人，課程 90 分鐘。**課前完成安裝與認證**，不要把現場時間花在下載 SDK。課程的主線為本機 tools、本機 Copilot SDK harness、選配 Foundry 部署。
+學員約 40 人，課程 90 分鐘。**課前完成安裝與認證**，不要把現場時間花在下載 SDK。課程的主線為現成工具 + Copilot Chat 分析、本機 Copilot SDK harness、選配 Foundry 部署。
 
 ## 學員必要環境
 
 | 項目 | Lab 1 | Lab 2 | Lab 3 |
 | --- | --- | --- | --- |
 | Git、VS Code、Python 3.13、repo | 必要 | 必要 | 必要 |
-| Copilot SDK 與其 pinned runtime | 不需要模型呼叫 | 必要 | 必要 |
+| VS Code Copilot Chat 登入／使用權限 | 分析時必要 | 可作開發輔助 | 不影響 hosting |
+| Copilot SDK 與其 pinned runtime | 報表工具不需要 | 必要 | 必要 |
+| 瀏覽器與可用的 localhost port | Copilot Chat 使用 VS Code | 8098，User/Admin 兩分頁 | 依主辦方環境 |
 | 個人 Copilot token 或主辦方 BYOK | 不需要 | 模型問答時需要 | 視選定 model provider |
 | Azure CLI、azd ≥1.27.1、Foundry extension | 不需要 | 不需要 | hands-on 才需要 |
 | 預建 Foundry project、model、RBAC | 不需要 | 不需要 | 每人一套，或講師 demo |
 
-Lab 2 是**在本機執行 harness**，不是 LLM 離線運行。使用 GitHub Copilot 模型時會消耗自己的 Copilot 額度；BYOK 的 inference 費用由 Azure/model provider 計費。這與範例中被分析的 GitHub billing data 是不同帳。
+Lab 1 的 `brief` 只產生資料，學員另外在 VS Code Copilot Chat 附檔分析；不需 SDK token。Lab 2 是**在本機執行 harness**，不是 LLM 離線運行。使用 GitHub Copilot 模型時會消耗自己的 Copilot 額度；BYOK 的 inference 費用由 Azure/model provider 計費。這與範例中被分析的 GitHub billing data 是不同帳。
 
 ## 安裝（repository root）
 
@@ -44,7 +46,13 @@ python -m finops_agent --data-dir data cost
 
 SDK 固定為 `github-copilot-sdk==1.0.11`，由該 SDK 決定 runtime 版本。不要混用任意 PATH 上的 Copilot CLI。若跳過預下載，SDK 首次使用會下載 runtime，可能影響現場時間；**不需要獨立啟動 CLI server 或 Docker**。
 
-預期 baseline：MTD net `4760` AI credits、`44.88` USD、snapshot `2026-09-03T23:59:59Z`。Starter 的 Lab 1/2 checks 在完成 TODO 前會失敗；`starter/tests` 是應該立即可過的 baseline。
+預期 baseline：MTD net `4760` AI credits、`44.88` USD、snapshot `2026-09-03T23:59:59Z`。`starter/tests` 與 `starter/checks/test_lab1.py` 應開箱即通過；只有 Lab 2 checks 在完成 SDK TODO 前會失敗。
+
+## Lab 1 Copilot Chat 準備
+
+在 VS Code 登入有 Copilot 權限的 GitHub 帳號，確認能使用 Chat 的 Ask 模式與附檔。先以 `python -m finops_agent brief --output workshop-output/lab1-evidence.json` 產生分析包，再把該 JSON 作為唯一資料附件。檔案已存在時請使用新名稱；工具不覆蓋舊分析。
+
+這個練習只用課程內建工具，不需 Docker、SSO、資料同步 PAT 或真實 organization。Copilot Chat 不可用時，與已登入的鄰座共看同一份資料或觀摩講師，不分享帳密；報表工具仍可離線運行。
 
 ## Lab 2 模型認證
 
@@ -71,6 +79,14 @@ python -m finops_agent ask "目前本月的範例費用是多少？"
 
 模型名稱需是該帳號可用的模型。Token 到期、模型政策或額度不足不是缺少 Foundry；由 TA 協助確認，必要時兩人共用一台已登入的機器操作，**不交換 token**。
 
+### Lab 2 browser demo
+
+完成 `demo_connection.py` 接線後，在同一 shell 執行 `python -m finops_agent demo`。預設只監聽 `127.0.0.1:8098`，User 與 Admin 連結在 console 顯示；用兩個分頁並排演示。每次啟動是獨立的 carol mock 帳號，限額 20、已用 14、剩餘 6。
+
+不用 Node、React build、Docker 或正式登入。已在 Python requirements 內列出 Starlette / Hypercorn。不要用公開 tunnel 或 `0.0.0.0` 將 demo 對外開放；它的角色 capability 只是單機教學邊界，持有 admin link 就代表管理者。重啟會恢復初始資料，舊連結失效。
+
+若 SDK 認證或網路不可用，可用頁面上「直接提交 mock 申請（不經模型）」表單繼續演示人工核准；必須明說聊天尚未成功。頁面資料 refresh 不會消耗 model tokens。
+
 ### 方式 B：主辦方 BYOK
 
 明確設定 `FINOPS_MODEL_PROVIDER=foundry-key`、`FOUNDRY_MODEL_URL`（OpenAI-compatible `/openai/v1/` endpoint）、`FOUNDRY_API_KEY`，以及 `COPILOT_MODEL`（**Azure deployment name**）。金鑰只放目前 shell 或本機被忽略的 `starter/.env`，不要放教材、Git、prompt 或群組聊天室。
@@ -87,7 +103,7 @@ Foundry hands-on 不是現場從零 provision。建議由 **1 位講師 + 3–4 
 | --- | --- |
 | T−7 天 | 確認地區、hosted/code deployment 支援、模型配額、使用成本上限；完成一套 golden environment |
 | T−3 天 | 預建 40 套個人 project/environment，隔離登入與權限；確認 model deployment 名稱、Managed Identity 權限與模型呼叫 |
-| T−1 天 | 每台/每人安裝 Python、依賴及 runtime；用實際課程 Wi-Fi 完成 Lab 2；對 40 套環境做小批量 deployment/invoke 彩排 |
+| T−1 天 | 每台/每人安裝 Python、依賴及 runtime；確認 Lab 1 附件分析、Lab 2 User/Admin 完整閉環與 8098 port；對 40 套環境做小批量 deployment/invoke 彩排 |
 | 開場前 | 講師 endpoint 與 logs 可用，備妥範例回應或錄影、checkpoint recovery、TA 分區表 |
 
 只存在 Azure 資源還不夠：每人本機 `starter/.azure/` 必須已綁定正確的個人 azd environment。主辦方依 [Foundry Hosted Agent 部署指南](https://learn.microsoft.com/azure/foundry/agents/how-to/deploy-hosted-agent) 建立與綁定，`starter/azure.yaml` 是 code deployment 設定。不要把含 secrets 的 `.azure/` 複製給全班、提交到 Git，或讓全班共用講師的 admin identity。

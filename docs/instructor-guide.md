@@ -1,15 +1,15 @@
 # 講師指南：40 人／90 分鐘
 
-以 **本機 tools → 本機 Copilot SDK harness → 選配 Foundry** 為唯一主線。不要因 Azure 開通失敗犧牲前兩個 Labs，也不要把執行 solution 的示範當成學員已完成 hands-on。
+以 **現成 tools + Copilot Chat 分析 → 本機 Copilot SDK harness → 選配 Foundry** 為唯一主線。Lab 1 免寫程式，hands-on 是調查、追問、交叉比對與提出決策，不是完成 aggregation。不要因 Azure 開通失敗犧牲前兩個 Labs。
 
 ## 開場 demo（0–8 分）
 
-展示一次完整價值鏈：
+先在 VS Code Copilot Chat 附上 mock evidence JSON，展示價值鏈，而不是先帶大家讀 Python：
 
 1. 問：「本月至今哪個部門消耗最多 AI credits？」
 2. 答案指出 AI Lab、2,400 credits、USD 26，以及 snapshot/歸屬限制。
 3. 問：「主要哪些模型？如何節省 context/token，又不犧牲品質？」
-4. 請 Agent 提出 seat 回收 plan，展示未核准不可執行。
+4. 展示一頁「行動／假設／風險／核准角色」摘要，再說明 Lab 2 將此流程自動化且未核准不可執行。
 
 強調三件事：**credits 不等於 tokens；觀察到高用量不等於浪費；hosting 與 model provider 是不同設定。** GitHub budget 不會限制 Azure BYOK inference 或 Hosted Agent compute 費用。
 
@@ -19,12 +19,16 @@
 | --- | --- | --- |
 | 0–8 | 情境、完成品與安全邊界 | 知道今天不操作真實公司資料 |
 | 8–15 | 啟動 starter baseline | Python3.13、cost=4760/44.88 |
-| 15–19 | 解釋 billing 與 metrics | 知道各資料可／不可回答什麼 |
-| 19–31 | Lab 1 實作 aggregation | 部門排行、Unallocated |
-| 31–37 | 核對與 recovery | Checkpoint1 通過 |
-| 37–42 | 展示 session、schema、handler | 理解 SDK 自管 runtime |
-| 42–51 | Lab 2 接 tools 與 instructions | Checkpoint2 通過 |
-| 51–63 | 問答與 console 人工核准 | `/plans`、`/approve`、`/audit` |
+| 15–18 | 產生分析包、附到 Copilot Chat | 不改程式，現成工具開箱可用 |
+| 18–23 | 成本熱點與部門／模型 drilldown | 每個結論有欄位和計算式 |
+| 23–29 | Budget / seat review | 區分過舊、未知、矛盾證據 |
+| 29–33 | 比較節省方案 what-if | 假設、時間範圍與風險分開 |
+| 33–37 | 一頁決策摘要 | 3 發現、2 行動、1 暫不執行 |
+| 37–43 | 一個 harness factory 接線 | Checkpoint2 通過，不填多份 schema |
+| 43–47 | 開啟 User / Admin 兩個頁面 | 角色分開、同一個 local demo |
+| 47–52 | 使用者詢問花費與節省建議 | carol 已用 14、限額 20、剩餘 6 |
+| 52–60 | 使用者提高額度申請、管理者核准 | pending 不改額度；approve 後 30／14／16 |
+| 60–63 | 使用者再次詢問、核對 audit | 完整閉環而非只看「申請成功」 |
 | 63–78 | Lab 3 或講師 demo | remote invocation 或明確標記的觀摩 |
 | 78–86 | 治理／觀測延伸與 Q&A | 說得出 production 還缺什麼 |
 | 86–90 | 收尾與清理 | 無遺留 token、host 程序 |
@@ -36,12 +40,27 @@
 | 決策點 | 行動 |
 | --- | --- |
 | 第 15 分仍卡安裝 | 使用課前備用機／pair programming；不分享帳密 |
-| 第 34 分未完成 Lab 1 | `python scripts/checkpoint.py --lab 1`，保留學員 backup |
+| 第 34 分未完成 Lab 1 | 不做 code recovery；縮成一個有依據的行動與一個保留決策，沿用同一分析包 |
 | 第 58 分未完成 Lab 2 | 還原 Lab 2 checkpoint，優先完成問答與人工核准 |
 | 第 63 分 Foundry 未就緒或約三成學員落後 | 全場切換 Lab 3 demo |
 | 部署等待超過 5 分鐘／廣泛 429 | 停止新的重試，使用既有 endpoint |
 
 每個人原則上有自己的預建 Foundry environment；不是把全班連到同一個有寫入權限的 Agent。完成較快者可測試未知使用者、無 activity、不同期間或錯誤 payload；不要增加第四個 lab。
+
+## 22 分鐘的 FinOps 分析體驗
+
+把重點放在學員能回答哪些管理問題，以及如何用資料支持決策；不要把這段時間用來架設額外平台。
+
+| 分析主題 | Lab 1 的具體任務 | 範圍限制 |
+| --- | --- | --- |
+| Cost overview / per-user AI credits | 問誰／哪部門／哪模型用最多，追問兩種占比 | 固定 snapshot，不宣稱 real-time |
+| Inactive-user / seat utilization review | ivan、judy 的 activity 與 billing evidence 交叉比對 | 不把 null 或過舊 telemetry 當刪除授權 |
+| Cost Centers / Unassigned Users | 解釋 Unallocated 90，提出補歸屬資料的任務 | 沒有 cost-center CRUD 或跨企業 sync |
+| UBB budget consumed / remaining | carol 與 org budget 是否合理、影響誰 | 依個別 scope 分開，非 unified hard cap |
+| ROI / optimization / recommendation review | 比較兩個明列假設的方案，形成待核准建議 | 無效益與導入成本就不聲稱已算出 ROI |
+| Human-in-the-loop actions | Lab 1 只提議；Lab 2 User 提申請、Admin 點擊核准 | 不批次操作真實 organization |
+
+不要要求學員安裝額外的 Docker / React / FastAPI 平台或交出 sync PAT。直接用本 repo 的工具、VS Code Copilot Chat 與 mock fixtures 展示分析成果。
 
 ## 基準答案與追問
 
@@ -55,18 +74,49 @@
 | Unallocated | 90 credits / USD 0.54 |
 | gpt-5.4 | 2,580 net credits |
 | 情境 budget=80 的 run-rate | 約 USD 448.80，不是已出帳金額 |
+| AI Lab 占比 | 約 50.42% net credits、57.93% net amount |
+| carol user budget | USD 20、已用 14、剩 6，使用率 70%，hard stop |
+| organization budget | USD 80、已用 45.20、剩 34.80，使用率 56.5% |
+| 方案 A（同一資料期間下降 10%） | USD 26 × 10% = USD 2.60，假設而非實績 |
+| 方案 B（下個月回收 1 seat） | 教學假設 USD 19 × 1 = USD 19，下月／經另行確認後才成立 |
 
 可追問：「Security credits 少於 Platform，但金額較高，為什麼不能只看排行？」「activity=null 是閒置還是未知？」「9 月 3 日 snapshot 能否回答 9 月 5 日此刻費用？」
 
-所有金額／單價是教學假設。真實用量取自 billing API，不能用不同模型的原始 token 單價回推這份 fixture。
+關鍵反例：ivan 的 seat activity 過舊，但 MTD billing 仍有 90 credits；judy 的 activity=null。合理結論應是先核實 telemetry、帳號狀態與業務需求，而不是「全部可回收」。`forecast 80` 算出的 35.12 是 scenario headroom，不能覆蓋 org budget 自己的 34.80。
 
-## 人工核准示範
+所有金額／單價是教學假設。方案 A、B 時間範圍不同，不可加總成「已節省 USD 21.60／月」。真實用量取自 billing API，不能用不同模型的原始 token 單價回推這份 fixture。
 
-使用 `python -m finops_agent chat`，讓模型建立 plan，再由你在 console 執行 `/approve PLAN_ID`。先輸入錯誤確認字串展示拒絕，再輸入完整 `APPROVE PLAN_ID`。模型無法呼叫這個 console command，也拿不到 confirmation token。
+## Lab 1 成果評量
 
-示範 seat 與 user budget 各一次。Seat removal 的 mock 結果是 `pending_cancellation`，不是「立即省下當月費用」。User budget 必須 hard stop；USD 0 可能直接封鎖，人工確認時要逐項解釋 payload。
+請學員把經人工檢視的 Copilot 答案存為 `workshop-output/finops-review.md`。TA 抽查每人能說明下列項目；不以「pytest 成功」代替分析成果。
 
-`approval-demo --rehearse` 只用於自動彩排，永遠 mock、標記 simulated，不能用它證明真人核准。Approval 有期限、綁定 plan 內容，執行失敗不自動重試；真實遠端操作若回應遺失，要先確認遠端現況。
+| 項目 | 合格條件 |
+| --- | --- |
+| 3 個發現 | 有 JSON section、數字、期間、單位與限制 |
+| 跨表查核 | 能指出至少一個 activity 與 billing 不一致或無法判定的案例 |
+| 2 個優先行動 | 有理由、假設、風險、owner／核准角色與下次衡量指標 |
+| 保留決策 | 至少一個暫不執行的動作，理由不能只是「AI 不確定」 |
+| 交接 Lab 2 | 候選 plan 清楚寫 current → proposed，仍是待核准狀態 |
+
+範例可優先選：針對 AI Lab 做有限範圍的 context/model routing 實驗；或先補齊 Unallocated 的可信歸屬。合理答案不只有降 budget／移除 seat，也可以提高有業務理由的個人額度，並要求追蹤品質和消耗。
+
+Copilot Chat 無法使用時，pair programming 或講師示範，不交換 token；仍讓學員檢視 evidence 並口頭提出決策。不要改回編碼題塞滿剩餘時間。
+
+## Lab 2 現場 demo 劇本
+
+只讓學員補 `demo_connection.py` 的 `build_demo_harness()`，工具、instructions 與 UI 都預建。開 `python -m finops_agent demo`，把 User / Admin 兩頁並排；不要先花十分鐘介紹 JSON schema。
+
+1. User 問：「我目前花費多少？額度還剩多少？」卡片／回答為 carol 1,400 credits、USD 14；限額 20、剩餘 6。
+2. User 問：「有什麼節省建議？」要求 evidence，不用額度降低取代效率建議。
+3. User 說：「請提高到 USD 30，因為下週 migration 專案。」顯示 pending；特別停一下，讓全場看到限額仍是 20。
+4. Admin 檢視申請人、理由、20 → 30，點「核准並套用 mock 額度」。
+5. User 頁面自動變成 approved、30／14／16，再問同一問題；既有花費不會因加額歸零。
+
+提醒：User 頁面只看自己的資料；prompt 自稱 admin 沒有效果。Admin capability 不在 user responses／model tools；兩種角色的 endpoint 在後端檢查。這只是 localhost 的 role-play，不宣稱取代正式 SSO、授權與 durable request store。
+
+模型不穩時，改用標示為「直接提交 mock 申請（不經模型）」的表單演示後半段，同時說明前半段 SDK 聊天未成功。重啟 process 可恢復初始額度和新的角色連結；不要做 blanket retries 造成多筆申請。
+
+Seat 回收、通用 `chat` 的 `/approve`、`approval-demo` 都留作課後或最後 8 分鐘的選配進階內容。**Lab 2 必做只有個人查詢、節省建議、提高限額與 admin approve。**
 
 ## Lab 3 demo 與觀測
 
@@ -74,7 +124,7 @@
 
 要看 App Insights 分散式 trace，必須課前配置該環境 exporter、權限與保留規則；不要把 console logging 宣稱為完整 token trace。Tool logs 只記名稱與結果類型，不記 keys、approval token 或整份企業報表。
 
-Hosted 範例採**每次 invocation 獨立 mock state**，不提供跨使用者共享核准 API；學生不會透過 remote endpoint 寫真實 seats。若進一步產品化，需要登入／授權、可信部門來源、durable approval store、API concurrency 控制與完整 retention policy。
+Hosted 範例採**每次 invocation 獨立 mock state**，不提供 Lab 2 的瀏覽器頁面或跨使用者共享核准 API；學生不會透過 remote endpoint 寫真實 seats。若進一步產品化，需要登入／授權、可信部門來源、durable approval store、API concurrency 控制與完整 retention policy。
 
 若全場 Foundry 不可用：展示課前錄影、request/response 和 source，明確標記「demo」，不要說現場部署成功。
 
@@ -90,7 +140,7 @@ Hosted 範例採**每次 invocation 獨立 mock state**，不提供跨使用者�
 
 ## 課前 release gate
 
-從 solution 執行測試，再準備 starter。分別跑 starter baseline 與還原後的三個 checks；確認 recovery 不刪學生的編輯。使用 Python3.13 和 manifest 中宣告的 SDK 版本，不要只在其他版本上 import 一次就視為相容。
+從 solution 執行測試，再準備 starter。Lab 1 checks 在未編輯的 starter 應直接通過；還原 Lab 2 答案後，三個 checks 都要通過。確認 `brief` 可產生 UTF-8 資料且不覆蓋舊檔、recovery 不刪學生分析摘要。使用 Python3.13 和 manifest 中宣告的 SDK 版本，不要只在其他版本上 import 一次就視為相容。
 
 完整本機 transport 彩排可用 `FINOPS_TEST_RUNTIME=1` 執行 `solution/tests/test_sdk_roundtrip.py`：它使用真實 SDK/runtime、loopback fake model，不需雲端憑證；它證明 tool routing，不代表真實模型品質或 Azure identity 已驗證。課前仍需用活動帳號跑真正的 `ask`，以及在預建環境跑真正的 remote invoke。
 

@@ -18,6 +18,7 @@ from copilot.session_events import (
     SessionIdleData,
     ToolExecutionStartData,
 )
+from copilot.tools import Tool
 
 from .instructions import FINOPS_AGENT_INSTRUCTIONS
 from .sdk_tools import build_sdk_tools
@@ -33,12 +34,16 @@ class CopilotFinOpsHarness:
         *,
         model: str | None = None,
         timeout_seconds: float = 120,
+        custom_tools: list[Tool] | None = None,
+        instructions: str = FINOPS_AGENT_INSTRUCTIONS,
     ) -> None:
         if timeout_seconds <= 0:
             raise ValueError("timeout must be positive")
         self.toolbox = toolbox
         self.model = model
         self.timeout_seconds = timeout_seconds
+        self._custom_tools = custom_tools
+        self.instructions = instructions
         self.tool_calls: list[str] = []
         self._session: CopilotSession | None = None
         self._turn_lock = asyncio.Lock()
@@ -56,7 +61,11 @@ class CopilotFinOpsHarness:
                     "FINOPS_MODEL_PROVIDER and its model credentials."
                 )
             home = stack.enter_context(TemporaryDirectory(prefix="finops-sdk-"))
-            tools = build_sdk_tools(self.toolbox)
+            tools = (
+                self._custom_tools
+                if self._custom_tools is not None
+                else build_sdk_tools(self.toolbox)
+            )
             tool_names = {tool.name for tool in tools}
 
             def permit(
@@ -89,7 +98,7 @@ class CopilotFinOpsHarness:
                     available_tools=[f"custom:{tool.name}" for tool in tools],
                     system_message={
                         "mode": "append",
-                        "content": FINOPS_AGENT_INSTRUCTIONS,
+                        "content": self.instructions,
                     },
                     on_permission_request=permit,
                     enable_session_store=False,

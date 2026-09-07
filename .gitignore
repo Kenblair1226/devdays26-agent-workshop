@@ -5,6 +5,7 @@
 .venv/
 .venv*/
 .workshop-backups/
+workshop-output/
 .copilot/
 real-data/
 .env.*

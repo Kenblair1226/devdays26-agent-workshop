@@ -12,6 +12,11 @@ answering questions about Foundry agents, read the microsoft-foundry skill first
   approval and `FINOPS_ALLOW_REAL_WRITES=true`.
 - Preserve the three-lab flow: local tools, local Copilot SDK harness, then optional
   Foundry deployment.
+- Lab 1 uses ready-made tools and GitHub Copilot Chat for analysis; do not re-add
+  a mandatory tool-implementation exercise.
+- Lab 2 uses one harness factory connection and the local user/admin budget demo.
+  Keep its user tools scoped; never expose approval to the model or host the demo
+  approval API as a production/Foundry authorization service.
 
 ## Validation
 

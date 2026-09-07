@@ -29,6 +29,9 @@ from finops_agent.tools import FinOpsToolbox
                 "payload": {"selected_usernames": ["judy"]},
             },
         ),
+        ("get_my_costs", {}),
+        ("get_my_savings", {}),
+        ("request_budget_increase", {"new_limit": 30, "reason": "Migration project"}),
         (
             "plan_action",
             {
@@ -150,11 +153,62 @@ def test_real_sdk_calls_finops_tool_without_cloud_credentials(
     )
     try:
         toolbox = FinOpsToolbox(MockGitHubFinOpsClient())
-        harness = CopilotFinOpsHarness(toolbox, timeout_seconds=45)
+        personal = operation in {
+            "get_my_costs",
+            "get_my_savings",
+            "request_budget_increase",
+        }
+        if personal:
+            from finops_agent.budget_demo import BudgetDemo
+            from finops_agent.demo_connection import build_demo_harness
+
+            service = BudgetDemo(toolbox)
+            harness = build_demo_harness(service)
+        else:
+            harness = CopilotFinOpsHarness(toolbox, timeout_seconds=45)
         answer = asyncio.run(harness.ask("Which department used the most AI credits?"))
         assert answer == "FinOps tool result recorded."
         assert observed["requests"] >= 2
-        if operation == "rank_department_consumption":
+        if personal:
+            assert "alice" not in str(observed["tool_result"])
+            if operation == "request_budget_increase":
+                from starlette.testclient import TestClient
+
+                from finops_agent.demo_server import create_demo_app
+
+                app = create_demo_app(service)
+                pending = service.requests()[0]
+                assert pending["status"] == "pending"
+                assert service.profile()["budget"]["budget_amount"] == 20
+                url = f"/api/admin/requests/{pending['id']}/approve"
+                with TestClient(app) as admin_client:
+                    assert (
+                        admin_client.post(
+                            url,
+                            headers={"X-Demo-Token": app.state.user_token},
+                            json={"confirmed": True},
+                        ).status_code
+                        == 403
+                    )
+                    assert (
+                        admin_client.post(
+                            url,
+                            headers={"X-Demo-Token": app.state.admin_token},
+                            json={"confirmed": True},
+                        ).status_code
+                        == 200
+                    )
+                    updated = admin_client.get(
+                        "/api/user", headers={"X-Demo-Token": app.state.user_token}
+                    ).json()
+                    assert updated["budget"]["budget_amount"] == 30
+                    assert updated["budget"]["remaining_amount"] == 16
+            elif operation == "get_my_costs":
+                assert "1400" in str(observed["tool_result"])
+                assert "remaining_amount" in str(observed["tool_result"])
+            else:
+                assert "recommendations" in str(observed["tool_result"])
+        elif operation == "rank_department_consumption":
             assert "AI Lab" in str(observed["tool_result"])
             assert "2400" in str(observed["tool_result"])
         else:

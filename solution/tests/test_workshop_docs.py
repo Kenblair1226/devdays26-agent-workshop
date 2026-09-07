@@ -30,3 +30,39 @@ def test_workshop_local_markdown_links_exist() -> None:
                 continue
             target_path = path.parent / target.split("#", 1)[0]
             assert target_path.exists(), f"{path.name} -> {target}"
+
+
+def test_lab1_is_an_analysis_deliverable_not_a_coding_checkpoint() -> None:
+    root = Path(__file__).parents[2]
+    text = (root / "docs" / "student-lab.md").read_text(encoding="utf-8")
+    lab1 = text.split("## Lab 1", 1)[1].split("## Lab 2", 1)[0]
+    for required in (
+        "Copilot Chat",
+        "lab1-evidence.json",
+        "finops-review.md",
+        "決策摘要",
+        "what-if",
+        "budget_review",
+        "seat",
+    ):
+        assert required in lab1
+    assert "TODO(Lab 1)" not in lab1
+    source = root / "starter" / "src" / "finops_agent" / "analytics.py"
+    assert "TODO(Lab 1)" not in source.read_text(encoding="utf-8")
+
+
+def test_lab2_is_one_connection_and_a_visible_approval_flow() -> None:
+    root = Path(__file__).parents[2]
+    text = (root / "docs" / "student-lab.md").read_text(encoding="utf-8")
+    lab2 = text.split("## Lab 2", 1)[1].split("## Lab 3", 1)[0]
+    for required in (
+        "demo_connection.py",
+        "python -m finops_agent demo",
+        "pending",
+        "approved",
+        "30",
+        "16",
+        "管理者",
+    ):
+        assert required in lab2
+    assert "編輯 `starter/src/finops_agent/sdk_tools.py`" not in lab2

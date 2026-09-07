@@ -21,8 +21,18 @@ def build_sdk_tools(toolbox: FinOpsToolbox) -> list[Tool]:
             period_schema,
             lambda args: toolbox.get_cost_summary(**args),
         ),
-        # TODO(Lab 2): Register rank_department_consumption using period_schema
-        # and a handler that forwards the arguments to toolbox.
+        _tool(
+            "rank_department_consumption",
+            "Rank departments by net AI-credit consumption.",
+            {
+                **period_schema,
+                "properties": {
+                    **period_schema["properties"],
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+                },
+            },
+            lambda args: toolbox.rank_department_consumption(**args),
+        ),
         _tool(
             "break_down_usage",
             "Break AI-credit usage down by model, user, department, or product.",
@@ -76,9 +86,29 @@ def build_sdk_tools(toolbox: FinOpsToolbox) -> list[Tool]:
             {"type": "object", "properties": {}, "additionalProperties": False},
             lambda _args: toolbox.list_budgets(),
         ),
-        # TODO(Lab 2): Register plan_action with kind, target, payload.
-        # Limit kind to the four supported seat/budget actions.
-        # Do not register approval as a model tool.
+        _tool(
+            "plan_action",
+            "Create a dry-run plan for a seat or budget change. Does not write.",
+            {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "assign_seats",
+                            "remove_seats",
+                            "create_budget",
+                            "update_budget",
+                        ],
+                    },
+                    "target": {"type": "string"},
+                    "payload": {"type": "object"},
+                },
+                "required": ["kind", "target", "payload"],
+                "additionalProperties": False,
+            },
+            lambda args: toolbox.plan_action(**args),
+        ),
         _tool(
             "execute_approved_action",
             "Execute a plan only with its one-time human approval token.",

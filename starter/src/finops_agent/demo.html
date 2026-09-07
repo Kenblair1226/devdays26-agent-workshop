@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>FinOps Copilot · Local mock demo</title>
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("scoutTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+    :root {
+      --cp-card-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body {
+      margin: 0;
+      background: var(--cp-bg);
+      color: var(--cp-text);
+      font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 17px;
+      line-height: 1.6;
+    }
+    button, input, textarea { font: inherit; }
+    button, summary { cursor: pointer; }
+    button, input, textarea, summary { border-radius: 0.625rem; }
+    button {
+      min-height: 48px;
+      padding: 10px 16px;
+      border: 1px solid var(--cp-border-strong);
+      background: var(--cp-surface);
+      color: var(--cp-text);
+      font-weight: 600;
+      line-height: 1.5;
+    }
+    button:hover:not(:disabled) { background: var(--cp-surface-soft); }
+    button:disabled { cursor: not-allowed; opacity: 0.6; }
+    button.primary {
+      border-color: var(--cp-accent);
+      background: var(--cp-accent);
+      color: var(--cp-accent-fg);
+    }
+    button.primary:hover:not(:disabled) { background: var(--cp-accent-hover); }
+    :focus-visible { outline: 3px solid var(--cp-accent); outline-offset: 4px; }
+    a { color: var(--cp-link); }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); line-height: 1.2; letter-spacing: -0.04em; }
+    h2 { font-size: clamp(1.4rem, 3vw, 1.8rem); line-height: 1.4; }
+    h3 { font-size: 1.125rem; }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--cp-border-strong);
+      background: var(--cp-surface);
+      color: var(--cp-text);
+    }
+    textarea { resize: vertical; min-height: 96px; }
+    input::placeholder, textarea::placeholder { color: var(--cp-text-soft); }
+    label { display: block; margin-bottom: 8px; font-weight: 600; }
+    fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+    legend { margin-bottom: 12px; font-weight: 600; }
+    dl, dd { margin: 0; }
+    dt { color: var(--cp-text-soft); }
+    progress {
+      display: block;
+      width: 100%;
+      height: 12px;
+      margin: 12px 0;
+      border: 0;
+      border-radius: 0.625rem;
+      overflow: hidden;
+      background: var(--cp-surface-soft);
+      color: var(--cp-accent);
+      accent-color: var(--cp-accent);
+    }
+    progress::-webkit-progress-bar { background: var(--cp-surface-soft); }
+    progress::-webkit-progress-value { background: var(--cp-accent); }
+    progress::-moz-progress-bar { background: var(--cp-accent); }
+    .wrap { width: min(1248px, 100%); margin: 0 auto; padding: 0 32px; }
+    .skip-link {
+      position: fixed;
+      top: 8px;
+      left: 8px;
+      z-index: 30;
+      padding: 12px 16px;
+      transform: translateY(-160%);
+      background: var(--cp-surface);
+      border: 2px solid var(--cp-accent);
+      border-radius: 0.625rem;
+    }
+    .skip-link:focus { transform: translateY(0); }
+    .mock-banner {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-bg-elevated);
+      font-size: 0.9375rem;
+    }
+    .banner-content, .header-content, .section-heading, .panel-heading, .request-heading, .form-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .banner-content { justify-content: flex-start; gap: 8px 16px; }
+    .demo-label, .role-label, .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 12px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    .demo-label { background: var(--cp-accent-soft); color: var(--cp-accent); border-color: var(--cp-accent); }
+    .header-content { padding-top: 32px; padding-bottom: 28px; }
+    .brand { display: flex; align-items: center; gap: 16px; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      flex: 0 0 48px;
+      height: 48px;
+      border-radius: 0.625rem;
+      background: var(--cp-accent);
+      color: var(--cp-accent-fg);
+      font-size: 1.625rem;
+      font-weight: 700;
+    }
+    .eyebrow { margin-bottom: 8px; color: var(--cp-accent); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.08em; }
+    .subtitle, .muted { color: var(--cp-text-soft); }
+    .subtitle { margin-top: 8px; }
+    .small { font-size: 0.875rem; }
+    .section-heading { align-items: flex-start; margin-bottom: 24px; }
+    .sync-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 24px; }
+    .sync-toolbar button { min-width: 112px; }
+    .sync-copy { flex: 1; min-width: 160px; }
+    .sync-copy p { font-size: 0.875rem; color: var(--cp-text-soft); }
+    .notice {
+      margin-bottom: 20px;
+      padding: 16px;
+      border: 1px solid var(--cp-border-strong);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .notice.error { border-color: var(--cp-danger); }
+    .notice.success { border-color: var(--cp-success); }
+    .card {
+      padding: 24px;
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-surface);
+      box-shadow: var(--cp-card-shadow);
+      min-width: 0;
+    }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .metric-label { color: var(--cp-text-soft); font-size: 0.9375rem; }
+    .metric-value { margin: 12px 0 4px; font-size: clamp(1.75rem, 3vw, 2.25rem); font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .metric-remaining { border-color: var(--cp-accent); background: var(--cp-accent-soft); }
+    .metric-remaining .metric-value { color: var(--cp-accent); }
+    .budget-track { margin-bottom: 24px; padding: 20px 24px; }
+    .budget-track .panel-heading { gap: 4px 16px; }
+    .workspace-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+    .stack { display: grid; gap: 20px; min-width: 0; }
+    .panel-heading { margin-bottom: 16px; }
+    .step-number { margin-right: 8px; color: var(--cp-accent); font-variant-numeric: tabular-nums; }
+    .quick-prompts { display: grid; gap: 8px; margin: 20px 0; }
+    .quick-prompts button { display: flex; align-items: baseline; gap: 12px; text-align: left; font-size: 0.9375rem; }
+    .quick-number { flex: 0 0 20px; color: var(--cp-accent); font-weight: 700; }
+    .chat-log {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: 440px;
+      min-height: 128px;
+      overflow-y: auto;
+      padding: 4px 4px 16px;
+      margin-bottom: 16px;
+      scrollbar-gutter: stable;
+    }
+    .empty-state { padding: 20px; border: 1px dashed var(--cp-border-strong); border-radius: 0.625rem; color: var(--cp-text-soft); }
+    .message { padding: 16px; border: 1px solid var(--cp-border); border-radius: 0.625rem; background: var(--cp-surface-soft); }
+    .message.user { margin-left: 24px; background: var(--cp-accent-soft); }
+    .message.assistant { margin-right: 16px; }
+    .message-name { margin-bottom: 8px; font-size: 0.8125rem; font-weight: 700; color: var(--cp-text-soft); }
+    .message-body, .request-reason { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .message-tools { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--cp-border); font-family: Consolas, "Courier New", Courier, monospace; font-size: 0.8125rem; color: var(--cp-text-soft); overflow-wrap: anywhere; }
+    .form-actions { align-items: center; margin-top: 12px; }
+    .form-actions p { flex: 1; min-width: 180px; }
+    .chat-progress { display: flex; align-items: center; gap: 12px; margin: 16px 0; padding: 12px; border-radius: 0.625rem; background: var(--cp-accent-soft); }
+    .spinner { width: 20px; height: 20px; flex: 0 0 20px; border: 3px solid var(--cp-border); border-top-color: var(--cp-accent); border-radius: 50%; animation: spin 1s linear infinite; }
+    .chat-progress small { display: block; color: var(--cp-text-soft); }
+    .request-list { display: grid; gap: 16px; }
+    .request-card { padding: 20px; border: 1px solid var(--cp-border); border-radius: 0.625rem; min-width: 0; }
+    .request-heading { align-items: flex-start; gap: 8px; }
+    .request-title { font-weight: 600; overflow-wrap: anywhere; }
+    .status-badge { flex-shrink: 0; }
+    .status-badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--cp-border-strong); }
+    .status-badge.pending::before { background: var(--cp-warning); }
+    .status-badge.approved::before { background: var(--cp-success); }
+    .request-amount { margin: 12px 0 16px; color: var(--cp-accent); font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .request-details { display: grid; gap: 12px; }
+    .request-details dt { font-size: 0.8125rem; }
+    .request-details dd { margin-top: 4px; overflow-wrap: anywhere; }
+    .request-note { margin-top: 16px; color: var(--cp-text-soft); font-size: 0.875rem; }
+    .approval-button { width: 100%; margin-top: 16px; }
+    details { min-width: 0; }
+    summary { padding: 8px 0; font-weight: 600; }
+    details[open] summary { margin-bottom: 12px; }
+    .fallback { padding: 16px 20px; border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-bg-elevated); }
+    .fallback summary { font-size: 0.9375rem; }
+    .fallback form { margin-top: 16px; }
+    .field { margin-top: 16px; }
+    .source-details { margin-top: 24px; padding: 16px 20px; border-top: 1px solid var(--cp-border); }
+    .source-details dl { display: grid; gap: 12px; }
+    .source-details dd, .source-details li { overflow-wrap: anywhere; }
+    .source-details ul { margin: 8px 0 0; padding-left: 24px; }
+    .admin-summary { display: flex; gap: 12px; flex-wrap: wrap; }
+    .admin-summary p { padding: 8px 16px; border-radius: 0.625rem; border: 1px solid var(--cp-border); background: var(--cp-surface); }
+    .audit-list { list-style: none; padding: 0; margin: 0; }
+    .audit-item { padding: 16px 0; border-bottom: 1px solid var(--cp-border); }
+    .audit-item:first-child { padding-top: 0; }
+    .audit-item:last-child { border-bottom: 0; padding-bottom: 0; }
+    .audit-event { font-weight: 600; overflow-wrap: anywhere; }
+    .audit-meta { margin-top: 4px; color: var(--cp-text-soft); font-size: 0.875rem; overflow-wrap: anywhere; }
+    .setup { max-width: 720px; margin: 16px auto 48px; }
+    .setup ol { padding-left: 24px; }
+    .setup li + li { margin-top: 12px; }
+    footer { padding-top: 32px !important; padding-bottom: 32px !important; color: var(--cp-text-soft); font-size: 0.875rem; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 960px) {
+      .workspace-grid { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 600px) {
+      body { font-size: 16px; }
+      .wrap { padding-left: 16px; padding-right: 16px; }
+      .mock-banner { padding: 8px 0; font-size: 0.8125rem; }
+      .banner-content { gap: 4px 8px; }
+      .header-content { padding-top: 24px; padding-bottom: 24px; }
+      .brand { gap: 12px; }
+      .brand-mark { flex-basis: 40px; height: 40px; }
+      .card { padding: 20px; }
+      .metrics { gap: 12px; }
+      .metrics .card { padding: 16px; }
+      .metric-value { font-size: 1.625rem; }
+      .request-card { padding: 16px; }
+      .section-heading { margin-bottom: 20px; }
+      .form-actions button { width: 100%; }
+      .message.user { margin-left: 12px; }
+      .message.assistant { margin-right: 8px; }
+      .source-details { padding: 16px 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳至主要內容</a>
+  <div class="mock-banner" role="note" aria-label="本機示範安全提醒">
+    <div class="wrap banner-content">
+      <strong class="demo-label">Local mock demo</strong>
+      <span>本機角色扮演／非正式登入；資料不會寫入 GitHub</span>
+    </div>
+  </div>
+  <header class="wrap header-content">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">F</span>
+      <div>
+        <p class="eyebrow">LAB 2 · COPILOT SDK</p>
+        <h1>FinOps Copilot</h1>
+        <p class="subtitle">看懂花費，提出申請，人工核准。</p>
+      </div>
+    </div>
+    <p id="role-label" class="role-label" hidden></p>
+  </header>
+  <main id="main" class="wrap" tabindex="-1">
+    <section id="setup" class="card setup" aria-labelledby="setup-title">
+      <p class="eyebrow">從啟動連結開始</p>
+      <h2 id="setup-title">請使用啟動主控台提供的角色連結</h2>
+      <p class="subtitle">這個頁面需要本機 demo 的角色與存取憑證，不提供正式登入。</p>
+      <ol>
+        <li>確認工作坊的本機 demo 伺服器已啟動。</li>
+        <li>從啟動主控台開啟分配給你的完整角色連結。</li>
+        <li>請勿分享含有存取憑證的網址，或將它貼入對話。</li>
+      </ol>
+      <p class="muted">缺少角色或憑證，或角色格式不正確時，本頁不會呼叫 API。</p>
+    </section>
+    <noscript><p class="notice error">此 demo 需要 JavaScript。請啟用 JavaScript 後，重新開啟啟動主控台的完整連結。</p></noscript>
+    <div id="workspace" hidden>
+      <div class="sync-toolbar">
+        <div class="sync-copy">
+          <p id="sync-status">正在連線至本機 mock 服務…</p>
+          <p id="last-updated">尚未同步</p>
+        </div>
+        <button id="refresh-button" type="button">重新整理</button>
+      </div>
+      <p id="sync-error" class="notice error" role="status" aria-live="polite" aria-atomic="true" hidden></p>
+      <p id="action-error" class="notice error" role="alert" aria-atomic="true" hidden></p>
+      <p id="action-status" class="notice success" role="status" aria-live="polite" aria-atomic="true" hidden></p>
+      <section id="user-view" aria-labelledby="user-title" hidden>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">USER WORKSPACE</p>
+            <h2 id="user-title">我的 AI 使用與額度</h2>
+            <p class="subtitle">先查詢，再申請。送出申請不會立即調整每月限額。</p>
+          </div>
+        </div>
+        <div class="metrics" aria-label="本月成本與額度">
+          <article class="card">
+            <h3 class="metric-label">本月 AI credits</h3>
+            <p id="credits-value" class="metric-value">—</p>
+            <p class="muted small">mock 帳務用量</p>
+          </article>
+          <article class="card">
+            <h3 class="metric-label">目前花費</h3>
+            <p id="spend-value" class="metric-value">—</p>
+            <p class="muted small">本月截至目前</p>
+          </article>
+          <article class="card">
+            <h3 class="metric-label">每月限額</h3>
+            <p id="limit-value" class="metric-value">—</p>
+            <p class="muted small">以已核准額度為準</p>
+          </article>
+          <article class="card metric-remaining">
+            <h3 class="metric-label">剩餘可用</h3>
+            <p id="remaining-value" class="metric-value">—</p>
+            <p class="muted small">限額扣除已消耗金額</p>
+          </article>
+        </div>
+        <div class="card budget-track">
+          <div class="panel-heading">
+            <h3 id="budget-progress-label">本月使用進度</h3>
+            <p id="consumed-label" class="small muted">等待額度資料…</p>
+          </div>
+          <progress id="budget-progress" max="100" value="0" aria-labelledby="budget-progress-label"></progress>
+          <p id="budget-policy" class="small muted">核准只調整限額，不重設已消耗金額。</p>
+          <p id="budget-announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+        </div>
+        <div class="workspace-grid">
+          <section class="card" aria-labelledby="chat-title">
+            <div class="panel-heading">
+              <h3 id="chat-title"><span class="step-number">01</span>與 FinOps Copilot 對話</h3>
+            </div>
+            <p class="small muted">模型透過 Copilot SDK 使用本機 mock 工具；不會自動核准額度。</p>
+            <div class="quick-prompts" role="group" aria-label="快速提問，按下即送出">
+              <button type="button" class="quick-prompt" disabled><span class="quick-number" aria-hidden="true">1</span><span>我目前花費多少？額度還剩多少？</span></button>
+              <button type="button" class="quick-prompt" disabled><span class="quick-number" aria-hidden="true">2</span><span>有什麼節省 AI credits 的建議？</span></button>
+              <button type="button" class="quick-prompt" disabled><span class="quick-number" aria-hidden="true">3</span><span>請把我的每月限額提高到 USD 30，理由是下週有 migration 專案。</span></button>
+            </div>
+            <div id="chat-log" class="chat-log" role="log" aria-label="與 FinOps Copilot 的對話紀錄" aria-live="polite" aria-relevant="additions" tabindex="0">
+              <p id="chat-empty" class="empty-state">從上方三個問題開始，或在下方輸入你的問題。此處只顯示實際送出的訊息與模型回覆。</p>
+            </div>
+            <div id="chat-progress" class="chat-progress" hidden>
+              <span class="spinner" aria-hidden="true"></span>
+              <div>
+                <p id="chat-progress-text" role="status" aria-live="polite">正在等待 Copilot SDK 回覆…</p>
+                <small>模型回覆可能需要 120 秒。<span id="chat-elapsed" aria-hidden="true"></span></small>
+              </div>
+            </div>
+            <p id="chat-error" class="notice error" role="alert" aria-atomic="true" hidden></p>
+            <form id="chat-form">
+              <label for="chat-input">你的問題</label>
+              <textarea id="chat-input" name="message" rows="3" placeholder="詢問成本、節省建議，或提出含理由的額度申請…" required aria-describedby="chat-hint"></textarea>
+              <div class="form-actions">
+                <p id="chat-hint" class="small muted">Enter 換行；按「送出訊息」提交。請勿輸入真實憑證或敏感資料。</p>
+                <button id="chat-send" class="primary" type="submit" disabled>送出訊息</button>
+              </div>
+            </form>
+          </section>
+          <aside class="stack" aria-label="額度申請與備援操作">
+            <section class="card" aria-labelledby="user-requests-title">
+              <div class="panel-heading">
+                <h3 id="user-requests-title"><span class="step-number">02</span>我的額度申請</h3>
+              </div>
+              <p id="user-request-summary" class="small muted" role="status" aria-live="polite" aria-atomic="true">等待申請資料…</p>
+              <div id="user-request-list" class="request-list" style="margin-top: 16px"></div>
+              <p class="request-note">核准結果會自動同步到這個畫面，不需要重新提問或重送申請。</p>
+            </section>
+            <details id="fallback-details" class="fallback">
+              <summary>直接提交 mock 申請（不經模型）</summary>
+              <p class="small muted">僅供模型登入或網路失敗時備援。這不是 SDK 對話；仍需人工核准，才會調整本機 mock 額度。</p>
+              <form id="fallback-form">
+                <fieldset id="fallback-fields" disabled>
+                  <legend class="sr-only">直接提交 mock 額度申請</legend>
+                  <label for="new-limit">新的每月限額（USD，整數）</label>
+                  <input id="new-limit" name="new_limit" type="number" min="1" step="1" inputmode="numeric" value="30" required>
+                  <div class="field">
+                    <label for="request-reason">申請理由</label>
+                    <textarea id="request-reason" name="reason" rows="3" required>下週有 migration 專案。</textarea>
+                  </div>
+                  <div class="form-actions">
+                    <button id="fallback-submit" type="submit">送出 mock 申請</button>
+                  </div>
+                </fieldset>
+              </form>
+            </details>
+          </aside>
+        </div>
+        <details class="source-details small">
+          <summary>帳務範圍與資料限制</summary>
+          <dl>
+            <div><dt>帳務期間</dt><dd id="billing-period">—</dd></div>
+            <div><dt>資料截至（本機時間）</dt><dd id="billing-as-of">—</dd></div>
+            <div><dt>資料來源</dt><dd id="billing-source">—</dd></div>
+          </dl>
+          <ul id="billing-limitations"></ul>
+        </details>
+      </section>
+      <section id="admin-view" aria-labelledby="admin-title" hidden>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">ADMIN WORKSPACE</p>
+            <h2 id="admin-title">額度申請審核</h2>
+            <p class="subtitle">先核對金額與理由，再明確核准。只修改本機 mock 資料。</p>
+          </div>
+          <div class="admin-summary" aria-label="申請統計">
+            <p id="admin-pending-count">待核准 —</p>
+            <p id="admin-approved-count">已核准 —</p>
+          </div>
+        </div>
+        <div class="workspace-grid">
+          <section class="card" aria-labelledby="admin-request-heading">
+            <div class="panel-heading">
+              <h3 id="admin-request-heading" tabindex="-1">額度申請</h3>
+            </div>
+            <p id="admin-request-summary" class="small muted" role="status" aria-live="polite" aria-atomic="true">等待申請資料…</p>
+            <div id="admin-request-list" class="request-list" style="margin-top: 16px"></div>
+          </section>
+          <section class="card" aria-labelledby="audit-title">
+            <div class="panel-heading">
+              <h3 id="audit-title">本機稽核紀錄</h3>
+            </div>
+            <p id="audit-caption" class="small muted" style="margin-bottom: 16px">僅顯示事件名稱、操作者與本機時間。</p>
+            <ul id="audit-list" class="audit-list" aria-label="最近的本機稽核事件"></ul>
+          </section>
+        </div>
+      </section>
+    </div>
+  </main>
+  <footer class="wrap">
+    <p>工作坊限定 · 角色連結僅供本機示範；權限由後端 API 驗證，隱藏介面不等於授權。</p>
+  </footer>
+  <script>
+    (() => {
+      "use strict";
+
+      const byId = (id) => document.getElementById(id);
+      const setText = (id, text) => {
+        const element = byId(id);
+        if (element.textContent !== String(text)) element.textContent = String(text);
+      };
+      const make = (tag, text, className) => {
+        const element = document.createElement(tag);
+        if (text !== undefined) element.textContent = String(text);
+        if (className) element.className = className;
+        return element;
+      };
+      const notice = (id, message) => {
+        setText(id, message);
+        byId(id).hidden = !message;
+      };
+      const numberFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+      const timeFormat = new Intl.DateTimeFormat("zh-TW", { dateStyle: "short", timeStyle: "short" });
+      const number = (value) => Number.isFinite(value) ? numberFormat.format(value) : "—";
+      const money = (value, currency = "USD") => `${currency} ${number(value)}`;
+      const time = (value) => {
+        if (!value) return "—";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? String(value) : timeFormat.format(date);
+      };
+
+      document.querySelector(".skip-link").addEventListener("click", (event) => {
+        event.preventDefault();
+        byId("main").focus();
+        byId("main").scrollIntoView();
+      });
+      window.addEventListener("hashchange", () => window.location.reload());
+
+      const fragment = new URLSearchParams(window.location.hash.slice(1));
+      const view = fragment.get("view");
+      const token = fragment.get("token");
+      if (!["user", "admin"].includes(view) || !token || !token.trim() ||
+          !["http:", "https:"].includes(window.location.protocol)) return;
+
+      byId("setup").hidden = true;
+      byId("workspace").hidden = false;
+      byId(`${view}-view`).hidden = false;
+      byId("role-label").hidden = false;
+      setText("role-label", view === "user" ? "使用者 · carol" : "管理員 · 本機審核");
+
+      let profile = null;
+      let userBusy = false;
+      let chatBusy = false;
+      let accessBlocked = false;
+      let approvingId = null;
+      let approvalButtons = [];
+      let adminRequests = [];
+      let adminAudit = [];
+      let userRequestFingerprint = "";
+      let adminRequestFingerprint = "";
+      let auditFingerprint = "";
+      let limitationFingerprint = "";
+      let refreshInFlight = false;
+      let refreshQueued = false;
+      let dataRevision = 0;
+      const quickButtons = [...document.querySelectorAll(".quick-prompt")];
+      const prompts = [
+        "我目前花費多少？額度還剩多少？",
+        "有什麼節省 AI credits 的建議？",
+        "請把我的每月限額提高到 USD 30，理由是下週有 migration 專案。"
+      ];
+
+      class DemoError extends Error {
+        constructor(message, status = 0) {
+          super(message);
+          this.status = status;
+        }
+      }
+
+      async function api(path, body, timeout = 20000) {
+        if (!path.startsWith("/api/") || new URL(path, window.location.origin).origin !== window.location.origin) {
+          throw new DemoError("安全保護：只允許同來源的本機 demo API。");
+        }
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => controller.abort(), timeout);
+        try {
+          const response = await fetch(path, {
+            method: body === undefined ? "GET" : "POST",
+            headers: {
+              "Accept": "application/json",
+              "X-Demo-Token": token,
+              ...(body === undefined ? {} : { "Content-Type": "application/json" })
+            },
+            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+            mode: "same-origin",
+            credentials: "omit",
+            cache: "no-store",
+            redirect: "error",
+            referrerPolicy: "no-referrer",
+            signal: controller.signal
+          });
+          let data;
+          try {
+            data = await response.json();
+          } catch (error) {
+            if (controller.signal.aborted) throw error;
+          }
+          if (!response.ok) {
+            const explanation = typeof data?.message === "string" && data.message.trim()
+              ? data.message : "伺服器未提供錯誤說明，請檢查本機啟動主控台。";
+            const prefix = response.status === 403
+              ? "角色／存取權限錯誤（403）。請使用啟動主控台提供的對應角色連結。"
+              : `本機 API 回報錯誤（${response.status}）。`;
+            throw new DemoError(`${prefix}\n${explanation}`, response.status);
+          }
+          if (!data || typeof data !== "object" || Array.isArray(data)) {
+            throw new DemoError("本機 API 回傳格式不正確，請檢查啟動主控台。");
+          }
+          return data;
+        } catch (error) {
+          if (error instanceof DemoError) throw error;
+          if (controller.signal.aborted) {
+            throw new DemoError("等待本機服務逾時。若剛才送出申請或核准，結果尚未確認；請先重新整理查看狀態，再決定是否重試，避免重複提交。");
+          }
+          throw new DemoError("無法連線至本機 demo 服務。請確認伺服器仍在執行，再重新整理；若剛才送出申請或核准，請先查看最新狀態再重試。");
+        } finally {
+          window.clearTimeout(timer);
+        }
+      }
+
+      function updateControls() {
+        const disabled = accessBlocked || !profile || userBusy;
+        byId("chat-send").disabled = disabled;
+        setText("chat-send", chatBusy ? "等待回覆…" : "送出訊息");
+        quickButtons.forEach((button) => { button.disabled = disabled; });
+        byId("fallback-fields").disabled = disabled;
+        setText("fallback-submit", userBusy && !chatBusy ? "正在提交…" : "送出 mock 申請");
+        approvalButtons.forEach(({ button, request }) => {
+          button.disabled = accessBlocked || approvingId !== null || request.status !== "pending";
+          button.textContent = approvingId === request.id ? "正在套用 mock 額度…"
+            : request.status === "pending" ? "核准並套用 mock 額度"
+            : request.status === "approved" ? "已核准並套用" : "目前狀態不可核准";
+        });
+      }
+
+      function showError(id, error, prefix = "") {
+        if (error.status === 403) {
+          accessBlocked = true;
+          updateControls();
+          setText("sync-status", "存取遭拒，已暫停自動同步。請重新開啟正確的角色連結。");
+        }
+        notice(id, `${prefix}${error instanceof DemoError ? error.message : "資料格式或操作異常，請檢查本機啟動主控台。"}`);
+      }
+
+      function requestSummary(requests) {
+        if (!requests.length) return "尚無額度申請";
+        const pending = requests.filter((request) => request.status === "pending").length;
+        const approved = requests.filter((request) => request.status === "approved").length;
+        const other = requests.length - pending - approved;
+        return `待核准 ${pending} 筆 · 已核准 ${approved} 筆${other ? ` · 其他 ${other} 筆` : ""}`;
+      }
+
+      function detail(list, label, value, className) {
+        const row = make("div");
+        row.append(make("dt", label), make("dd", value, className));
+        list.append(row);
+      }
+
+      function renderRequests(containerId, requests, isAdmin) {
+        const focusedId = isAdmin
+          ? approvalButtons.find(({ button }) => button === document.activeElement)?.request.id : undefined;
+        if (isAdmin) approvalButtons = [];
+        const cards = [...requests]
+          .sort((left, right) => Number(right.status === "pending") - Number(left.status === "pending"))
+          .map((request) => {
+            const card = make("article", undefined, "request-card");
+            const heading = make("div", undefined, "request-heading");
+            const status = request.status === "pending" ? "pending" : request.status === "approved" ? "approved" : "unknown";
+            heading.append(
+              make("p", isAdmin ? `${request.user} 的額度申請` : "每月限額調整", "request-title"),
+              make("span", status === "pending" ? "待核准" : status === "approved" ? "已核准" : "未知狀態", `status-badge ${status}`)
+            );
+            card.append(heading, make("p", `${money(request.current_limit)} → ${money(request.requested_limit)}`, "request-amount"));
+            const details = make("dl", undefined, "request-details");
+            detail(details, "申請理由", request.reason, "request-reason");
+            detail(details, "申請時間（本機時間）", time(request.requested_at));
+            if (request.approved_at) detail(details, "核准時間（本機時間）", time(request.approved_at));
+            card.append(details);
+            if (isAdmin) {
+              card.append(make("p", status === "pending"
+                ? "按下下方按鈕即代表你已確認這筆申請的金額與理由，並同意立即套用至本機 mock 額度。已消耗金額不會歸零。"
+                : status === "approved" ? "此申請已完成；不會重複套用，也不會重設已消耗金額。"
+                : "此狀態不提供核准操作。", "request-note"));
+              const button = make("button", undefined, "primary approval-button");
+              button.type = "button";
+              button.addEventListener("click", () => approve(request));
+              approvalButtons.push({ button, request });
+              card.append(button);
+            } else {
+              card.append(make("p", status === "pending"
+                ? "等待人工核准；申請尚未生效，目前每月限額不會因送出而改變。"
+                : status === "approved" ? "已套用 mock 額度；上方限額與剩餘可用金額會自動更新。"
+                : "請重新整理確認申請狀態。", "request-note"));
+            }
+            return card;
+          });
+        byId(containerId).replaceChildren(...(cards.length ? cards : [
+          make("p", isAdmin ? "目前沒有申請。使用者提交後，申請會自動出現在這裡。" : "尚未提出申請。可透過對話提出新限額與理由。", "empty-state")
+        ]));
+        if (isAdmin) {
+          updateControls();
+          if (focusedId !== undefined) {
+            const next = approvalButtons.find(({ request }) => request.id === focusedId)?.button;
+            (next && !next.disabled ? next : byId("admin-request-heading")).focus({ preventScroll: true });
+          }
+        }
+      }
+
+      function renderProfile(next) {
+        if (next?.backend !== "mock") {
+          profile = null;
+          updateControls();
+          throw new DemoError("安全保護：此頁僅支援 mock 後端。請以 FINOPS_BACKEND=mock 啟動本機 demo。");
+        }
+        if (!next.billing || !next.budget || !Array.isArray(next.requests)) {
+          profile = null;
+          updateControls();
+          throw new DemoError("使用者資料不完整，請檢查本機 demo API。");
+        }
+        const previousLimit = profile?.budget.budget_amount;
+        profile = next;
+        const { billing, budget, requests } = profile;
+        setText("role-label", `使用者 · ${profile.user}`);
+        setText("credits-value", number(billing.net_quantity));
+        setText("spend-value", money(billing.net_amount, billing.currency));
+        setText("limit-value", money(budget.budget_amount, budget.currency));
+        setText("remaining-value", money(budget.remaining_amount, budget.currency));
+        setText("consumed-label", `已消耗 ${money(budget.consumed_amount, budget.currency)} / 限額 ${money(budget.budget_amount, budget.currency)}`);
+        const ratio = budget.budget_amount > 0 ? budget.consumed_amount / budget.budget_amount : budget.consumed_amount > 0 ? 1 : 0;
+        byId("budget-progress").value = Number.isFinite(ratio) ? Math.min(100, Math.max(0, ratio * 100)) : 0;
+        const budgetText = `每月限額 ${money(budget.budget_amount, budget.currency)}；已消耗 ${money(budget.consumed_amount, budget.currency)}，剩餘可用 ${money(budget.remaining_amount, budget.currency)}。`;
+        setText("budget-announcement", budgetText);
+        setText("budget-policy", `${budget.prevent_further_usage ? "達到限額即停止使用（mock）。" : ""}核准只調整限額，不重設已消耗金額。`);
+        if (previousLimit !== undefined && previousLimit !== budget.budget_amount) notice("action-status", `額度已更新。${budgetText}`);
+        setText("user-request-summary", requestSummary(requests));
+        const fingerprint = JSON.stringify(requests);
+        if (fingerprint !== userRequestFingerprint) {
+          renderRequests("user-request-list", requests, false);
+          userRequestFingerprint = fingerprint;
+        }
+        setText("billing-period", `${billing.period?.start ?? "—"} 至 ${billing.period?.end ?? "—"}（${billing.period?.label === "month_to_date" ? "本月截至目前" : billing.period?.label ?? "—"}）`);
+        setText("billing-as-of", time(billing.as_of));
+        setText("billing-source", billing.source ?? "未提供");
+        const limitations = Array.isArray(billing.limitations) ? billing.limitations : [];
+        const limitationsKey = JSON.stringify(limitations);
+        if (limitationsKey !== limitationFingerprint) {
+          byId("billing-limitations").replaceChildren(...limitations.map((text) => make("li", text)));
+          limitationFingerprint = limitationsKey;
+        }
+        updateControls();
+      }
+
+      function renderAdmin(data) {
+        if (!Array.isArray(data.requests) || !Array.isArray(data.audit)) {
+          throw new DemoError("審核資料不完整，請檢查本機 demo API。");
+        }
+        adminRequests = data.requests;
+        adminAudit = data.audit;
+        setText("admin-pending-count", `待核准 ${adminRequests.filter((request) => request.status === "pending").length}`);
+        setText("admin-approved-count", `已核准 ${adminRequests.filter((request) => request.status === "approved").length}`);
+        setText("admin-request-summary", requestSummary(adminRequests));
+        const fingerprint = JSON.stringify(adminRequests);
+        if (fingerprint !== adminRequestFingerprint) {
+          renderRequests("admin-request-list", adminRequests, true);
+          adminRequestFingerprint = fingerprint;
+        }
+        const events = [...adminAudit]
+          .sort((left, right) => (Date.parse(right.timestamp) || 0) - (Date.parse(left.timestamp) || 0))
+          .slice(0, 20);
+        const auditKey = JSON.stringify(events.map(({ timestamp, event, actor }) => ({ timestamp, event, actor })));
+        if (auditKey !== auditFingerprint) {
+          byId("audit-list").replaceChildren(...(events.length ? events.map((event) => {
+            const item = make("li", undefined, "audit-item");
+            item.append(
+              make("p", event.event ?? "未命名事件", "audit-event"),
+              make("p", `操作者：${event.actor ?? "未提供"}`, "audit-meta"),
+              make("p", time(event.timestamp), "audit-meta")
+            );
+            return item;
+          }) : [make("li", "尚無稽核事件。核准後，請在此確認本機紀錄。", "empty-state")]));
+          auditFingerprint = auditKey;
+        }
+        setText("audit-caption", `${adminAudit.length > 20 ? "最近 20 筆事件。" : ""}僅顯示事件名稱、操作者與本機時間。`);
+      }
+
+      async function refresh(force = false) {
+        if (document.hidden || (accessBlocked && !force)) return;
+        if (refreshInFlight) {
+          if (force) refreshQueued = true;
+          return;
+        }
+        refreshInFlight = true;
+        byId("refresh-button").disabled = true;
+        setText("refresh-button", "同步中…");
+        const revision = dataRevision;
+        try {
+          const data = await api(view === "user" ? "/api/user" : "/api/admin");
+          // A GET started before a completed write must not overwrite its newer result.
+          if (revision === dataRevision) {
+            if (view === "user") renderProfile(data);
+            else renderAdmin(data);
+            accessBlocked = false;
+            updateControls();
+            notice("sync-error", "");
+            setText("last-updated", `最近同步：${new Date().toLocaleTimeString("zh-TW", { hour12: false })}`);
+            setText("sync-status", document.hidden ? "分頁已隱藏，暫停自動同步。" : "每 3 秒自動同步 · 僅讀取 mock 狀態，不呼叫模型");
+          }
+        } catch (error) {
+          showError("sync-error", error, "資料同步失敗；已顯示的資料可能不是最新。\n");
+          if (!accessBlocked) setText("sync-status", "連線異常，將自動重試；也可按「重新整理」。");
+        } finally {
+          refreshInFlight = false;
+          byId("refresh-button").disabled = false;
+          setText("refresh-button", "重新整理");
+          if (refreshQueued) {
+            refreshQueued = false;
+            void refresh(true);
+          }
+        }
+      }
+
+      function appendMessage(kind, text, tools = []) {
+        const log = byId("chat-log");
+        const follow = kind === "user" || log.scrollHeight - log.clientHeight - log.scrollTop < 64;
+        byId("chat-empty")?.remove();
+        const message = make("article", undefined, `message ${kind}`);
+        message.append(
+          make("p", kind === "user" ? `你 · ${profile.user}` : "FinOps Copilot", "message-name"),
+          make("p", text, "message-body")
+        );
+        const toolNames = Array.isArray(tools) ? tools.filter((tool) => typeof tool === "string") : [];
+        if (toolNames.length) message.append(make("p", `已呼叫工具：${toolNames.join(" · ")}`, "message-tools"));
+        log.append(message);
+        if (follow) log.scrollTop = log.scrollHeight;
+      }
+
+      byId("chat-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (userBusy || accessBlocked || !profile) return;
+        const input = byId("chat-input");
+        const originalInput = input.value;
+        const message = originalInput.trim();
+        if (!message) {
+          input.setCustomValidity("請輸入問題，不能只有空白。");
+          input.reportValidity();
+          return;
+        }
+        userBusy = true;
+        chatBusy = true;
+        dataRevision += 1;
+        updateControls();
+        notice("chat-error", "");
+        appendMessage("user", message);
+        byId("chat-progress").hidden = false;
+        setText("chat-progress-text", "正在等待 Copilot SDK 回覆…");
+        setText("chat-elapsed", "已等待 0 秒");
+        const started = Date.now();
+        const progressTimer = window.setInterval(() => {
+          const seconds = Math.floor((Date.now() - started) / 1000);
+          setText("chat-elapsed", `已等待 ${seconds} 秒`);
+          if (seconds >= 30) setText("chat-progress-text", "Copilot SDK 仍在處理，請保留此頁，勿重複送出。");
+        }, 1000);
+        try {
+          const data = await api("/api/chat", { message }, 150000);
+          if (typeof data.reply !== "string") throw new DemoError("對話 API 未提供有效回覆，請檢查本機啟動主控台。");
+          dataRevision += 1;
+          renderProfile(data.profile);
+          appendMessage("assistant", data.reply, data.tool_calls);
+          if (input.value === originalInput) input.value = "";
+        } catch (error) {
+          showError("chat-error", error, "對話未完成。\n");
+          byId("fallback-details").open = true;
+        } finally {
+          window.clearInterval(progressTimer);
+          byId("chat-progress").hidden = true;
+          userBusy = false;
+          chatBusy = false;
+          dataRevision += 1;
+          updateControls();
+          void refresh(true);
+        }
+      });
+      byId("chat-input").addEventListener("input", () => byId("chat-input").setCustomValidity(""));
+      quickButtons.forEach((button, index) => {
+        button.addEventListener("click", () => {
+          if (userBusy || accessBlocked || !profile) return;
+          byId("chat-input").value = prompts[index];
+          byId("chat-input").setCustomValidity("");
+          byId("chat-form").requestSubmit();
+        });
+      });
+
+      byId("fallback-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (userBusy || accessBlocked || !profile) return;
+        const amount = byId("new-limit");
+        const reasonInput = byId("request-reason");
+        const newLimit = Number(amount.value);
+        const reason = reasonInput.value.trim();
+        if (!Number.isSafeInteger(newLimit) || newLimit < 1) {
+          amount.setCustomValidity("請輸入有效的正整數 USD 限額。");
+          amount.reportValidity();
+          return;
+        }
+        if (!reason) {
+          reasonInput.setCustomValidity("請填寫申請理由，不能只有空白。");
+          reasonInput.reportValidity();
+          return;
+        }
+        userBusy = true;
+        dataRevision += 1;
+        updateControls();
+        notice("action-error", "");
+        notice("action-status", "");
+        try {
+          const data = await api("/api/requests", { new_limit: newLimit, reason });
+          if (!data.request) throw new DemoError("申請 API 未提供申請結果；請重新整理確認狀態，避免重複提交。");
+          dataRevision += 1;
+          renderProfile(data.profile);
+          notice("action-status", "已直接提交 mock 申請（不經模型）。待人工核准後，新的每月限額才會生效。");
+        } catch (error) {
+          showError("action-error", error, "直接提交 mock 申請未完成。\n");
+        } finally {
+          userBusy = false;
+          dataRevision += 1;
+          updateControls();
+          void refresh(true);
+        }
+      });
+      ["new-limit", "request-reason"].forEach((id) => byId(id).addEventListener("input", () => byId(id).setCustomValidity("")));
+
+      async function approve(request) {
+        if (view !== "admin" || accessBlocked || approvingId !== null || request.status !== "pending") return;
+        if (typeof request.id !== "string" || !request.id) {
+          showError("action-error", new DemoError("申請缺少有效識別碼，無法核准；請重新整理。"));
+          return;
+        }
+        approvingId = request.id;
+        dataRevision += 1;
+        updateControls();
+        notice("action-error", "");
+        notice("action-status", `正在核准 ${request.user} 的 ${money(request.requested_limit)} mock 額度…`);
+        try {
+          const data = await api(`/api/admin/requests/${encodeURIComponent(request.id)}/approve`, { confirmed: true });
+          if (data.request?.id !== request.id || data.request.status !== "approved") {
+            throw new DemoError("尚未收到已核准結果，請重新整理確認狀態；本頁不會假設核准成功。");
+          }
+          dataRevision += 1;
+          renderAdmin({
+            requests: adminRequests.map((item) => item.id === request.id ? data.request : item),
+            audit: adminAudit
+          });
+          notice("action-status", `已核准並套用 ${data.request.user} 的 ${money(data.request.requested_limit)} mock 每月限額。已消耗金額不會歸零；使用者畫面會自動同步。`);
+        } catch (error) {
+          notice("action-status", "");
+          showError("action-error", error, "核准操作未完成。\n");
+        } finally {
+          approvingId = null;
+          dataRevision += 1;
+          updateControls();
+          void refresh(true);
+        }
+      }
+
+      byId("refresh-button").addEventListener("click", () => void refresh(true));
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) setText("sync-status", "分頁已隱藏，暫停自動同步。");
+        else if (!accessBlocked) void refresh(true);
+      });
+      window.setInterval(() => void refresh(), 3000);
+      void refresh();
+    })();
+  </script>
+</body>
+</html>

@@ -2,12 +2,15 @@
 
 **Copilot SDK 是 Agent harness；Foundry 是 hosting。** Direct code deployment 不需要維護自訂 Dockerfile、sidecar 或 CLI TCP server；SDK 仍會自管其必要的 runtime process，並非完全移除了 runtime。
 
-## 本機：先建立 tools，再讓模型選擇工具
+## 本機：先用現成工具分析，再讓 SDK 選擇工具
 
 ```mermaid
 flowchart LR
     User["學員"] --> CLI["Python CLI"]
-    CLI -->|"cost / departments"| Tools["FinOpsToolbox"]
+    CLI -->|"cost / departments / brief"| Tools["FinOpsToolbox"]
+    Tools --> Evidence["Lab 1 mock evidence JSON"]
+    Evidence -->|"學員手動附檔"| Chat["VS Code Copilot Chat / Ask"]
+    Chat --> Decision["FinOps 決策摘要 / 待核准建議"]
     CLI -->|"ask / chat"| SDK["Copilot SDK / stdio runtime"]
     SDK --> Model["GitHub Copilot 或 BYOK model"]
     SDK -->|"explicit custom-tool allowlist"| Tools
@@ -19,7 +22,32 @@ flowchart LR
     Mock --> Audit["In-memory audit"]
 ```
 
-Lab 1 的 deterministic CLI 不載入 Copilot 或 Azure client；只需要 Python 與 fixture。Lab 2 則增加 SDK model calling、instructions、schemas 和 tool handlers。CLI `chat` 在同一個 conversation 保留 toolbox 狀態；`ask` 是獨立一次問答。
+Lab 1 的現成 deterministic CLI 不載入 Copilot 或 Azure client；只需要 Python 與 fixture。`brief` 將既有報表工具輸出收集為 read-only JSON，學員再手動附到 VS Code Copilot Chat 分析。Lab 2 透過 `demo_connection.py` 將預建個人 tools 接到同一個 SDK harness。上圖的通用 CLI `ask` / `chat` 和 seat 操作是進階範例，不再是 Lab 2 必做。
+
+## Lab 2：個人 FinOps 與管理者核准
+
+```mermaid
+flowchart LR
+    U["User page / carol"] -->|"user capability"| ChatAPI["Demo chat API"]
+    ChatAPI --> H["CopilotFinOpsHarness"]
+    H --> T["get_my_costs / get_my_savings"]
+    H --> R["request_budget_increase"]
+    T --> D["BudgetDemo / scoped mock evidence"]
+    R --> P["Pending request / limit still 20"]
+    A["Admin page"] -->|"separate admin capability + human click"| Approve["ApprovalWorkflow"]
+    P --> Approve
+    Approve --> M["Mock budget: 20 -> 30"]
+    M --> Refresh["User refresh: consumed 14 / remaining 16"]
+    Refresh --> U
+```
+
+`BudgetDemo` 將 user 固定在伺服器端；model 沒有任意 username、plan payload 或 approve 參數。`get_my_costs` 只回傳 carol 的 billing、budget 與申請；`get_my_savings` 只使用她的 evidence。管理者核准是另一個 HTTP endpoint，不是 LLM tool。
+
+`demo_server.py` 只綁 localhost，產生不同的 user/admin capabilities，以 request header 驗證；更改 UI role 不會繞過伺服器檢查。這是單一機器的角色扮演，並非 production 登入或多租戶 RBAC。持有 admin link 代表管理者，因此不要公布該連結或把頁面公開。
+
+同一個 demo process 保留 SDK conversation、mock budgets、pending requests；頁面輪詢只讀這些資料，不重新呼叫模型。核准前不改額度，核准後不重設 consumed；重複核准不再次執行，過時的 budget snapshot 拒絕核准。退出程序後一切重設。
+
+`demo.html` 沒有前端 build 或外部 CDN；「直接提交 mock 申請」是明確標示、不經模型的備援，不是默默替代 SDK 問答。Lab 3 不包含此 UI 或 approval API。
 
 ## Foundry：相同 harness，獨立 request state
 
@@ -45,6 +73,8 @@ flowchart LR
 
 | 能力 | 認證／控制 | 不代表 |
 | --- | --- | --- |
+| Lab 2 使用者／管理者角色 | 本機啟動期不同 capabilities；核准需人點擊 | 正式 GitHub／Entra 登入或 real org 寫入權限 |
+| Lab 1 Copilot Chat 分析 | VS Code 的 GitHub Copilot 登入、只附合成資料 | SDK 已完成接線或 GitHub org API 權限 |
 | 個人 Copilot model calling | `COPILOT_GITHUB_TOKEN` | GitHub organization billing 管理權限 |
 | BYOK model calling | API key 或 Managed Identity | Foundry hosting 已部署 |
 | Real GitHub read adapter | instructor CLI、最小權限 token | 允許寫入 |
@@ -55,7 +85,7 @@ Runtime 採 `mode="empty"`，只允許明確註冊的 custom tools；不讀取�
 
 ## Approval 與資料生命週期
 
-模型只建立 plan。可信的 console command 顯示 kind、target、payload，要求完整確認字串後才發出 approval capability。Token 綁定 plan 指紋、有期限，對錯誤 token、過期 token 或改過的 plan 都拒絕；重複執行同一個有效 plan 不再次呼叫 backend。
+Lab 2 模型只提交提高限額申請；管理者頁面顯示 user、current → requested 與 reason，人點擊後才核准。進階 CLI 則用完整確認字串。Token 綁定 plan 指紋、有期限，對錯誤 token、過期 token 或改過的 plan 都拒絕；重複執行同一個有效 plan 不再次呼叫 backend。
 
 Mock seats、budgets、plans、audit 都只存在目前程序。稽核事件記錄操作階段，不包含 tokens。真實遠端 API 的 exactly-once 與 distributed concurrency 並未由本範例保證；遠端回應遺失需人工核對，不能盲目重試。
 
@@ -78,3 +108,7 @@ Real billing endpoint 回傳的是報表，不是即時 meter；`retrieved_at` �
 - [Seat management（文件標示 public preview）](https://docs.github.com/en/rest/copilot/copilot-user-management)
 - [Budget API](https://docs.github.com/en/rest/billing/budgets)
 - [User / organization budget 語意](https://docs.github.com/en/copilot/concepts/billing/budgets-for-usage-based-billing)
+
+## 課程範圍
+
+Lab 1 以成本、seats、UBB budgets、部門歸屬與節省建議為分析情境。本課程使用 mock tools、人工核准流程與 direct-code hosting，不包含正式 SSO、跨組織同步或即時帳務資料。

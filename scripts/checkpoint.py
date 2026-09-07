@@ -6,13 +6,16 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 CHECKPOINTS = {
-    "1": ("analytics.py",),
-    "2": ("instructions.py", "sdk_tools.py"),
+    "1": (),
+    "2": ("demo_connection.py",),
 }
 
 
 def restore_checkpoint(root: Path, lab: str) -> list[Path]:
     names = CHECKPOINTS["1"] + CHECKPOINTS["2"] if lab == "all" else CHECKPOINTS[lab]
+    if not names:
+        print("Lab 1 uses ready-made tools; no source files need restoring.")
+        return []
     source = root / "solution" / "src" / "finops_agent"
     destination = root / "starter" / "src" / "finops_agent"
     for name in names:
