@@ -11,7 +11,12 @@ from urllib.parse import urlsplit
 
 from copilot import CopilotClient
 from copilot.rpc import PermissionDecisionApproveOnce, PermissionDecisionReject
-from copilot.session import CopilotSession, PermissionRequest, ProviderConfig
+from copilot.session import (
+    CopilotSession,
+    PermissionRequest,
+    ProviderConfig,
+    ProviderTokenArgs,
+)
 from copilot.session_events import (
     AssistantMessageData,
     PermissionRequestCustomTool,
@@ -217,7 +222,7 @@ class CopilotFinOpsHarness:
             credential = DefaultAzureCredential()
             stack.push_async_callback(credential.close)
 
-            async def token_provider() -> str:
+            async def token_provider(_args: ProviderTokenArgs) -> str:
                 token = await credential.get_token("https://ai.azure.com/.default")
                 return token.token
 

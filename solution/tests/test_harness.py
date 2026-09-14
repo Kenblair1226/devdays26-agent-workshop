@@ -5,6 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from copilot.session import ProviderTokenArgs
 from copilot.session_events import (
     AssistantMessageData,
     PermissionRequestCustomTool,
@@ -235,8 +236,12 @@ def test_foundry_model_preserves_scoped_tools_and_human_approval(
                 )
                 assert "api_key" not in model_provider
                 get_token = model_provider["bearer_token_provider"]
-                assert await get_token() == "token-1"
-                assert await get_token() == "token-2"
+                token_args: ProviderTokenArgs = {
+                    "provider_name": "default",
+                    "session_id": "fake-session",
+                }
+                assert await get_token(token_args) == "token-1"
+                assert await get_token(token_args) == "token-2"
 
             result = await tools["request_budget_increase"].handler(
                 ToolInvocation(arguments={"new_limit": 30, "reason": "Migration"})
