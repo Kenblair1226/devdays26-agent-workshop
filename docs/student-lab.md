@@ -26,14 +26,19 @@
 
 ## 先把環境開起來
 
-如果還沒做過，先照 [環境準備](environment-prep.md) 完成安裝。接著在 **repo 根目錄，也就是看得到 `starter/` 和 `solution/` 的地方**，開啟終端。
+先在 **repo 根目錄，也就是看得到 `starter/` 和 `solution/` 的地方**，開啟終端。剛 clone 下來沒有 `starter/.venv/` 是正常的：這是每台電腦自己建立的 Python 虛擬環境，不能直接從 GitHub 下載別人的來用，也不會提交到 Git。
 
-下面分成 PowerShell 和 bash，選你正在使用的那一組就好。練習時都用 `starter/`，不要在同一個 Python 程序裡混用兩個版本。
+第一次使用，照下面順序做：**確認 Python 3.13 → 建立 `.venv` → 啟用 → 安裝依賴 → 跑範例**。如果課前已經建立環境並安裝好依賴，之後開新終端只需啟用環境、設定變數，再執行範例，不必重建。
+
+PowerShell 和 bash 選一組就好。練習時都用 `starter/`，不要在同一個 Python 程序裡混用兩個版本；Python 還沒安裝或遇到認證問題時，請看 [環境準備](environment-prep.md)。
 
 PowerShell 7：
 
 ```powershell
+python --version
+python -m venv .\starter\.venv
 & .\starter\.venv\Scripts\Activate.ps1
+python -m pip install -r .\starter\requirements.txt
 $env:PYTHONPATH = (Resolve-Path .\starter\src).ProviderPath
 $env:FINOPS_BACKEND = "mock"
 python -m finops_agent --data-dir .\data cost
@@ -42,11 +47,18 @@ python -m finops_agent --data-dir .\data cost
 bash：
 
 ```bash
+python3.13 --version
+python3.13 -m venv starter/.venv
 source starter/.venv/bin/activate
+python -m pip install -r starter/requirements.txt
 export PYTHONPATH="$PWD/starter/src"
 export FINOPS_BACKEND=mock
 python -m finops_agent --data-dir data cost
 ```
+
+版本應顯示 **3.13.x**；如果不是，先停下來選對 Python 再建立環境。如果 bash 裡的 `python` 已經是 3.13，也可以用 `python -m venv starter/.venv`。建立失敗時不要接著跑 `source`，先找 TA 檢查錯誤。
+
+進入 Lab 2 前，建議在啟用的環境中先跑一次 `python -m copilot download-runtime`，把 SDK runtime 下載好。Lab 1 的報表工具不需要這個下載；詳情在 [環境準備](environment-prep.md)。
 
 看到 `net_quantity=4760`、`net_amount=44.88`、`currency=USD`，就表示資料讀進來了。
 

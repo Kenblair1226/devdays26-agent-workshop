@@ -32,6 +32,33 @@ def test_workshop_local_markdown_links_exist() -> None:
             assert target_path.exists(), f"{path.name} -> {target}"
 
 
+def test_first_time_setup_creates_environment_before_activation() -> None:
+    root = Path(__file__).parents[2]
+    sequences = {
+        "powershell": (
+            "python --version",
+            r"python -m venv .\starter\.venv",
+            r"& .\starter\.venv\Scripts\Activate.ps1",
+            r"python -m pip install -r .\starter\requirements.txt",
+            r"python -m finops_agent --data-dir .\data cost",
+        ),
+        "bash": (
+            "python3.13 --version",
+            "python3.13 -m venv starter/.venv",
+            "source starter/.venv/bin/activate",
+            "python -m pip install -r starter/requirements.txt",
+            "python -m finops_agent --data-dir data cost",
+        ),
+    }
+    for name in ("student-lab.md", "environment-prep.md"):
+        text = (root / "docs" / name).read_text(encoding="utf-8")
+        for language, commands in sequences.items():
+            block = re.search(rf"```{language}\n(.*?)```", text, re.DOTALL)
+            assert block is not None, (name, language)
+            positions = [block[1].index(command) for command in commands]
+            assert positions == sorted(positions), (name, language)
+
+
 def test_lab1_is_an_analysis_deliverable_not_a_coding_checkpoint() -> None:
     root = Path(__file__).parents[2]
     text = (root / "docs" / "student-lab.md").read_text(encoding="utf-8")

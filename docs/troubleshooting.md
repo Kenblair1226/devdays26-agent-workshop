@@ -5,6 +5,8 @@
 | 症狀 | 處理方式 |
 | --- | --- |
 | `No module named finops_agent` | 回 repo root，設定指向 `starter/src` 的絕對 `PYTHONPATH`；啟用 Python3.13 venv |
+| `source` 找不到 `starter/.venv/bin/activate` | `.venv` 不在 Git 裡；先於 repo 根目錄執行 `python3.13 -m venv starter/.venv`，成功後再啟用並安裝 `starter/requirements.txt` |
+| PowerShell 找不到 `Activate.ps1` | 先確認 Python 為 3.13，再執行 `python -m venv .\starter\.venv`；Windows 使用 `Scripts\Activate.ps1`，不是 bash 的 `bin/activate` |
 | Lab 1 imports Copilot/Azure 失敗 | 確認執行目前版本的 `local_cli.py`；deterministic tools 不需先載入 SDK |
 | Lab 1 的 `NotImplementedError` | 你可能使用舊版 starter；新版工具已全部提供，不應要求補 aggregation |
 | `brief` 出現 `FileExistsError` | 保留既有輸出，改用 `--output workshop-output/lab1-evidence-v2.json` |

@@ -19,11 +19,14 @@ Lab 1 的 `brief` 只產生資料，學員另外在 VS Code Copilot Chat 附檔�
 
 ## 安裝（repository root）
 
-先用 `python --version` 確認是 **3.13.x**。Windows 建議 PowerShell 7；執行政策不允許 activation 時，直接使用 venv 內的 `python.exe`，不要永久放寬系統政策。
+`.venv` 不會隨 repo 提供，第一次 clone 後要在自己的電腦建立。以下從 repo 根目錄執行，先確認是 **Python 3.13.x**；版本不對或建立失敗時先修正，不要直接執行啟用指令。
+
+Windows 建議 PowerShell 7；執行政策不允許 activation 時，直接使用 `.\starter\.venv\Scripts\python.exe` 執行後續的 `-m pip` 和 `-m finops_agent`，不要永久放寬系統政策。已經做完安裝的人，之後只需啟用原本的環境。
 
 PowerShell：
 
 ```powershell
+python --version
 python -m venv .\starter\.venv
 & .\starter\.venv\Scripts\Activate.ps1
 python -m pip install -r .\starter\requirements.txt
@@ -36,7 +39,8 @@ python -m finops_agent --data-dir .\data cost
 bash：
 
 ```bash
-python -m venv starter/.venv
+python3.13 --version
+python3.13 -m venv starter/.venv
 source starter/.venv/bin/activate
 python -m pip install -r starter/requirements.txt
 python -m copilot download-runtime
