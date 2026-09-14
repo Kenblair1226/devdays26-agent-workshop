@@ -1,6 +1,6 @@
 # 環境準備與課前檢查
 
-學員約 40 人，課程 90 分鐘。**課前完成安裝與認證**，不要把現場時間花在下載 SDK。課程的主線為現成工具 + Copilot Chat 分析、本機 Copilot SDK harness、Foundry Model 切換及原有的選配部署。不加入 Toolbox、檢索或新的觀測服務。
+學員約 40 人。**課前完成安裝與認證**，讓現場可以專心實作。課程的主線為現成工具 + Copilot Chat 分析、本機 Copilot SDK harness、Foundry Model 切換及原有的選配部署。不加入 Toolbox、檢索或新的觀測服務。
 
 ## 學員必要環境
 
@@ -49,7 +49,7 @@ export FINOPS_BACKEND=mock
 python -m finops_agent --data-dir data cost
 ```
 
-SDK 固定為 `github-copilot-sdk==1.0.11`，由該 SDK 決定 runtime 版本。不要混用任意 PATH 上的 Copilot CLI。若跳過預下載，SDK 首次使用會下載 runtime，可能影響現場時間；**不需要獨立啟動 CLI server 或 Docker**。
+SDK 固定為 `github-copilot-sdk==1.0.11`，由該 SDK 決定 runtime 版本。不要混用任意 PATH 上的 Copilot CLI。若跳過預下載，SDK 首次使用會下載 runtime，可能中斷操作節奏；**不需要獨立啟動 CLI server 或 Docker**。
 
 預期 baseline：MTD net `4760` AI credits、`44.88` USD、snapshot `2026-09-03T23:59:59Z`。`starter/tests` 與 `starter/checks/test_lab1.py` 應開箱即通過；只有 Lab 2 checks 在完成 SDK TODO 前會失敗。
 
@@ -91,18 +91,6 @@ python -m finops_agent ask "目前本月的範例費用是多少？"
 不用 Node、React build、Docker 或正式登入。已在 Python requirements 內列出 Starlette / Hypercorn。不要用公開 tunnel 或 `0.0.0.0` 將 demo 對外開放；它的角色 capability 只是單機教學邊界，持有 admin link 就代表管理者。重啟會恢復初始資料，舊連結失效。
 
 若 SDK 認證或網路不可用，可用頁面上「直接提交 mock 申請（不經模型）」表單繼續演示人工核准；必須明說聊天尚未成功。頁面資料 refresh 不會消耗 model tokens。
-
-### 選配：查自己的 Copilot 帳號配額
-
-沿用方式 A 的 `COPILOT_GITHUB_TOKEN`，執行 `python -m finops_agent copilot-usage --live`。這是明確選入的真實唯讀查詢，即使 `FINOPS_BACKEND=mock` 也會連線 GitHub；但不建立 model session、不查 organization billing、不調整任何預算。CLI 載入 `starter/.env`，process environment 仍優先；不新增 `github_copilot_key` 變數，也不借用其他 CLI 的登入。
-
-若 demo 正在執行，在另一個已啟用 venv、設定 `PYTHONPATH` 的終端查詢；只設在原 shell 的 token 不會自動出現在新 shell，需重新隱藏輸入，或使用自己的被忽略 `.env`。保留 `FINOPS_BACKEND=mock` 和 `FINOPS_ALLOW_REAL_WRITES=false`。
-
-SDK `account.getQuota` 回傳目前帳號可見的配額種類、已用次數、剩餘比例和可用的重設日期；不是每把 key 的消費，也不是美元或 AI-credit 帳單。個人 Copilot 帳號／組織政策未提供配額、憑證不適用或網路不通時，命令回報 unavailable 並以非零狀態結束，不回傳 mock 數字或零。不為這段練習額外申請 billing/admin 權限；只用 Foundry BYOK 的學員可直接跳過。
-
-若要的是可對帳的花費，需另外考慮 billing scope 與授權：[GitHub billing usage](https://docs.github.com/en/rest/billing/usage) 的 user endpoints 只涵蓋個人自購方案；由 organization／enterprise 付費的使用量不在個人 billing endpoint 裡。這不是本段配額查詢要開放的權限。
-
-課前可由講師手動預跑一次，確認示範帳號能讀取且願意展示；不蒐集全班結果或分發共用 token。真實用量不要存進 repo、教材、Chat 附件或 Lab 1 evidence。
 
 ### 方式 B：主辦方 BYOK
 
@@ -150,12 +138,12 @@ Hosted 部署時，`azure.yaml` 會把 azd 的 `AZURE_AI_MODEL_DEPLOYMENT_NAME` 
 
 Foundry hands-on 不是現場從零 provision。建議由 **1 位講師 + 3–4 位 TA** 支援，每位 TA 負責約 10–13 人；另準備一個講師 demo 與少數備用環境。
 
-| 時點 | 主辦方完成事項 |
+| 準備階段 | 主辦方完成事項 |
 | --- | --- |
-| T−7 天 | 確認地區、hosted/code deployment 支援、模型配額、使用成本上限；完成一套 golden environment |
-| T−3 天 | 預建 40 套個人 project/environment，隔離登入與權限；確認 model deployment 名稱、Managed Identity 權限與模型呼叫 |
-| T−1 天 | 每台/每人安裝 Python、依賴及 runtime；確認 Lab 1 附件分析、Lab 2 User/Admin、Foundry Model 切換及回復；若要部署，另做小批量 deployment/invoke 彩排 |
-| 開場前 | 講師 endpoint 與 logs 可用，備妥範例回應或錄影、checkpoint recovery、TA 分區表 |
+| 環境設計 | 確認地區、hosted/code deployment 支援、模型配額、使用成本上限；完成一套 golden environment |
+| 個人環境建置 | 預建 40 套個人 project/environment，隔離登入與權限；確認 model deployment 名稱、Managed Identity 權限與模型呼叫 |
+| 功能彩排 | 每台/每人安裝 Python、依賴及 runtime；確認 Lab 1 附件分析、Lab 2 User/Admin、Foundry Model 切換及回復；若要部署，另做小批量 deployment/invoke 彩排 |
+| 開場檢查 | 講師 endpoint 與 logs 可用，備妥範例回應或錄影、checkpoint recovery、TA 分區表 |
 
 只存在 Azure 資源還不夠：每人本機 `starter/.azure/` 必須已綁定正確的個人 azd environment。主辦方依 [Foundry Hosted Agent 部署指南](https://learn.microsoft.com/azure/foundry/agents/how-to/deploy-hosted-agent) 建立與綁定，`starter/azure.yaml` 是 code deployment 設定。不要把含 secrets 的 `.azure/` 複製給全班、提交到 Git，或讓全班共用講師的 admin identity。
 
@@ -165,7 +153,7 @@ Foundry hands-on 不是現場從零 provision。建議由 **1 位講師 + 3–4 
 
 ## Lab 3 可用條件與 fallback
 
-第 63 分鐘，先確認模型與 inference 權限，再做 Foundry Model 切換；只有 hosting 也預備好才進入部署。模型或權限不可用時看講師模型 demo，或明確切回 Copilot；hosting 未開通或部署等候超過 5 分鐘則使用講師預部署端點。若講師雲端也不可用，播放課前錄影。模型呼叫、hosting 部署與觀摩要分別標示，不互相代替。
+進入 Lab 3 前，先確認 Lab 2 核心成果、模型與 inference 權限，再做 Foundry Model 切換；只有 hosting 也預備好才進入部署。模型或權限不可用時看講師模型 demo，或明確切回 Copilot；hosting 未開通、部署受阻或持續等待時，改用講師預部署端點。若講師雲端也不可用，播放課前錄影。模型呼叫、hosting 部署與觀摩要分別標示，不互相代替。
 
 Cloud readiness 必須包含一次真正的 remote invocation；本機 `/readiness` 只代表 HTTP host 啟動，不能證明 Managed Identity、模型授權或完整 tool calling 已成功。
 

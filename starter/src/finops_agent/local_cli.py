@@ -54,16 +54,6 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("chat", help="Multi-turn chat with human approval commands")
     subparsers.add_parser("seats")
     subparsers.add_parser("budgets")
-    usage = subparsers.add_parser(
-        "copilot-usage",
-        help="Read your real Copilot account quota without a model call",
-    )
-    usage.add_argument(
-        "--live",
-        action="store_true",
-        required=True,
-        help="Allow a live, read-only lookup using COPILOT_GITHUB_TOKEN.",
-    )
     demo = subparsers.add_parser("demo", help="Start the local user/admin budget demo")
     demo.add_argument("--port", type=int, default=8098)
     demo.add_argument("--user", default="carol", help="Bound mock user (default carol)")
@@ -87,26 +77,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    parser = build_parser()
-    args = parser.parse_args()
+    args = build_parser().parse_args()
     env_path = Path(__file__).resolve().parents[2] / ".env"
     if env_path.is_file():
         from dotenv import load_dotenv
 
         load_dotenv(env_path, override=False)
-    if args.command == "copilot-usage":
-        if args.instructor or args.data_dir is not None:
-            parser.error(
-                "copilot-usage uses only your Copilot credential, not org data"
-            )
-        from .copilot_usage import CopilotUsageError, read_copilot_usage
-
-        try:
-            usage = asyncio.run(read_copilot_usage(live=args.live))
-        except CopilotUsageError as error:
-            parser.exit(1, f"Copilot account quota unavailable: {error}\n")
-        print(json.dumps(usage, indent=2, ensure_ascii=False, allow_nan=False))
-        return
     backend = os.getenv("FINOPS_BACKEND", "mock").lower()
     if args.command == "demo":
         if backend != "mock" or args.instructor or args.data_dir is not None:

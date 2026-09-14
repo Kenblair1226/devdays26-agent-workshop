@@ -1,15 +1,15 @@
 # Copilot FinOps Agent Workshop
 
-以 **Python 3.13 + GitHub Copilot SDK + Microsoft Foundry**，在 90 分鐘內帶約 40 位學員完成可查詢費用、分析部門用量、提出節省建議及管理 seat/budget 計畫的 Agent。
+以 **Python 3.13 + GitHub Copilot SDK + Microsoft Foundry**，帶約 40 位學員透過三個 Labs，完成可查詢費用、分析部門用量、提出節省建議及管理 seat/budget 計畫的 Agent。
 
 | Lab | Hands-on | 執行位置 |
 | --- | --- | --- |
 | 1 | 用現成工具 + Copilot Chat 調查成本、seats、budgets，交付決策摘要 | 本機 mock 資料；Chat 需 GitHub 登入，免寫程式 |
-| 2 | 一次 harness 接線：查費用／節省建議 → 申請提高限額 → 管理者 approve；選配真實 Copilot 配額 | 本機使用者／管理者頁面，Copilot 或 BYOK model |
-| 3 | 同一個 harness 換成 Foundry Model，再選配 direct-code deploy | 預建模型；時間或資源不足改講師 demo |
+| 2 | 一次 harness 接線：查費用／節省建議 → 申請提高限額 → 管理者 approve | 本機使用者／管理者頁面，Copilot 或 BYOK model |
+| 3 | 同一個 harness 換成 Foundry Model，再選配 direct-code deploy | 預建模型；依環境與學員進度選擇實作或講師 demo |
 
 **學員入口：[環境準備](docs/environment-prep.md) → [學員手冊](docs/student-lab.md)。**
-講師請先讀 [90 分鐘 runbook](docs/instructor-guide.md)，並參考 [架構](docs/architecture.md) 與 [疑難排解](docs/troubleshooting.md)。[intro.md](intro.md) 保留中英文活動簡介。
+講師請先讀 [講師指南](docs/instructor-guide.md)，並參考 [架構](docs/architecture.md) 與 [疑難排解](docs/troubleshooting.md)。[intro.md](intro.md) 保留中英文活動簡介。
 
 ## Repository
 
@@ -35,8 +35,6 @@ Lab 1 聚焦成本總覽、seat review、部門歸屬、預算與 what-if。課�
 
 Lab 2 接線後執行 `python -m finops_agent demo`，開啟終端提供的 User / Admin 兩個連結。User 扮演 carol：已用 USD 14、限額 20、剩餘 6；要求提高至 30 後先維持 pending，管理者確認後變成 **限額 30、剩餘 16**。不需複製 plan ID、token 或輸入 JSON。
 
-選配執行 `python -m finops_agent copilot-usage --live`，用既有 `COPILOT_GITHUB_TOKEN` 唯讀查詢其所屬帳號的 Copilot 配額。這個命令不呼叫模型，只有明確加上 `--live` 才連線讀取；保留 mock backend，不新增 TODO、組織權限或真實寫入。配額不是 per-key 花費、美元或 token 數，也不會混入 carol 的模擬預算；沒有可用 token／配額就跳過。
-
 Lab 3 只新增 **Foundry Model 切換**，不加入 Toolbox 或其他服務。依 [課前模型設定](docs/environment-prep.md#lab-3-foundry-model-課前準備) 選用既有 `foundry-identity`／`foundry-key` provider，重啟同一個本機 demo；SDK、個人工具、mock 資料和 admin approval 不變。呼叫 Foundry 模型不等於 Hosted Agent 已部署，原有 hosting 留作選配。
 
 Foundry 的 `.env` 使用 `AZURE_OPENAI_ENDPOINT`、`AZURE_OPENAI_API_KEY`、`MODEL_NAME`；key 模式選 `FINOPS_MODEL_PROVIDER=foundry-key`，identity 模式不需 API key。`MODEL_NAME` 填 Azure deployment name，GitHub Copilot 的認證與 `COPILOT_MODEL` 維持原本設定。
@@ -47,7 +45,7 @@ Foundry 的 `.env` 使用 `AZURE_OPENAI_ENDPOINT`、`AZURE_OPENAI_API_KEY`、`MO
 
 `demo` 只綁定 localhost，User / Admin 使用不同的啟動期 capability；模型只持有個人查詢／申請工具，沒有 approve。這是單機角色演示，不是正式登入系統。狀態重啟即重設；不要將此頁面或 admin link 公開，也不要把 demo 核准 API 部署到 Foundry。
 
-真實 GitHub organization 資料／管理操作僅限 instructor CLI，寫入還需 write flag、有效的計畫核准及明確的人確認。選配個人帳號配額只在終端顯示，不傳給模型。**不提交 token、真實用量、公司資料、session history 或 audit logs。** Credits 不是原始 tokens；合成資料的價格不是正式 invoice。
+真實 GitHub organization 資料／管理操作僅限 instructor CLI，寫入還需 write flag、有效的計畫核准及明確的人確認。**不提交 token、真實用量、公司資料、session history 或 audit logs。** Credits 不是原始 tokens；合成資料的價格不是正式 invoice。
 
 Foundry Model 的 inference 費用由 Azure 計費，與 Agent 分析的 GitHub Copilot credits／budget 分開；提高 GitHub 限額不會改變 Azure quota，也不限制 Azure 支出。
 

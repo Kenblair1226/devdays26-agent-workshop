@@ -2,27 +2,43 @@ import re
 from pathlib import Path
 
 
-def test_three_labs_fit_the_ninety_minute_session() -> None:
+def workshop_documents() -> list[Path]:
     root = Path(__file__).parents[2]
-    text = (root / "docs" / "student-lab.md").read_text(encoding="utf-8")
-    assert re.findall(r"^## Lab (\d)[:：]", text, re.MULTILINE) == ["1", "2", "3"]
-    slots = [
-        (int(start), int(end))
-        for start, end in re.findall(r"\|\s*(\d+)[–-](\d+)\s*分\s*\|", text)
-    ]
-    assert slots[0][0] == 0 and slots[-1][1] == 90
-    assert sum(end - start for start, end in slots) == 90
-    assert all(left[1] == right[0] for left, right in zip(slots, slots[1:]))
-
-
-def test_workshop_local_markdown_links_exist() -> None:
-    root = Path(__file__).parents[2]
-    paths = [
+    return [
         root / "README.md",
         root / "intro.md",
         *sorted((root / "docs").glob("*.md")),
     ]
-    for path in paths:
+
+
+def test_workshop_keeps_exactly_three_labs() -> None:
+    root = Path(__file__).parents[2]
+    text = (root / "docs" / "student-lab.md").read_text(encoding="utf-8")
+    assert re.findall(r"^## Lab (\d)[:：]", text, re.MULTILINE) == ["1", "2", "3"]
+
+
+def test_workshop_uses_progression_instead_of_fixed_teaching_times() -> None:
+    schedule_patterns = (
+        r"\|\s*\d+\s*[–-]\s*\d+\s*(?:分(?:鐘)?)?\s*\|",
+        r"第\s*\d+(?:[–-]\d+)?\s*分",
+        r"^#{1,6} .*(?:\d+|[一二三四五六七八九十百]+)\s*分鐘",
+        r"T[−-]\d+\s*天",
+        r"\d+\s*分鐘內",
+        r"\b\d+[- ]minute\b",
+        r"部署(?:等候|等待)?超過\s*\d+\s*分鐘",
+    )
+    for path in workshop_documents():
+        text = path.read_text(encoding="utf-8")
+        for pattern in schedule_patterns:
+            assert not re.search(pattern, text, re.MULTILINE), (path.name, pattern)
+    root = Path(__file__).parents[2] / "docs"
+    for name in ("student-lab.md", "instructor-guide.md"):
+        assert "| 階段 |" in (root / name).read_text(encoding="utf-8"), name
+    assert "| 準備階段 |" in (root / "environment-prep.md").read_text(encoding="utf-8")
+
+
+def test_workshop_local_markdown_links_exist() -> None:
+    for path in workshop_documents():
         for target in re.findall(
             r"\[[^\]]+\]\(([^)]+)\)", path.read_text(encoding="utf-8")
         ):
@@ -117,29 +133,21 @@ def test_lab3_includes_model_switch_without_requiring_new_tool_services() -> Non
     assert "azd ai toolbox" not in lab3
 
 
-def test_lab2_live_quota_is_optional_and_separate_from_mock_budgets() -> None:
+def test_workshop_no_longer_advertises_the_retired_quota_command() -> None:
     root = Path(__file__).parents[2]
-    text = (root / "docs" / "student-lab.md").read_text(encoding="utf-8")
-    lab2 = text.split("## Lab 2", 1)[1].split("## Lab 3", 1)[0]
-    for required in (
-        "配額查詢選配",
-        "python -m finops_agent copilot-usage --live",
-        "COPILOT_GITHUB_TOKEN",
-        "FINOPS_BACKEND=mock",
-        "FINOPS_ALLOW_REAL_WRITES=false",
-        "account.getQuota",
-        "usedRequests",
-        "remainingPercentage",
-        "resetDate",
-        "as_of",
-        "per-key",
-        "不呼叫模型",
-        "延遲",
-        "不要附到 Copilot Chat",
-        "另外開一個終端",
-    ):
-        assert required in lab2
-    for name in ("environment-prep.md", "instructor-guide.md", "architecture.md"):
-        doc = (root / "docs" / name).read_text(encoding="utf-8")
-        assert "copilot-usage --live" in doc, name
-        assert "account.getQuota" in doc, name
+    paths = [
+        *workshop_documents(),
+        root / "starter" / ".env.example",
+        root / "solution" / ".env.example",
+    ]
+    for path in paths:
+        text = path.read_text(encoding="utf-8")
+        for retired in (
+            "copilot-usage --live",
+            "`copilot-usage`",
+            "copilot_usage.py",
+            "account.getQuota",
+            "quota_snapshots",
+            "Copilot account quota",
+        ):
+            assert retired not in text, (path.name, retired)

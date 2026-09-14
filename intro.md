@@ -4,11 +4,11 @@
 
 ### 課程簡介
 
-本工作坊以 **GitHub Copilot FinOps agent** 為情境，帶領學員在 90 分鐘內完成 **剛好 3 個 Labs**：
+本工作坊以 **GitHub Copilot FinOps agent** 為情境，帶領學員完成 **3 個 Labs**，依核心成果與現場進度安排實作或示範：
 
 1. **Lab 1（免寫程式）**：使用現成 FinOps tools 產生合成資料分析包，透過 GitHub Copilot Chat 調查成本、seat 與 budget，交付一頁決策摘要
-2. **Lab 2（local-only）**：只接上一個 Copilot SDK harness factory，使用者可詢問個人花費與節省建議、申請提高限額，管理者從另一個頁面核准；選配唯讀查看自己真實 Copilot 帳號的配額
-3. **Lab 3（optional）**：讓同一個 Copilot SDK harness 改用 Foundry Model，重跑費用查詢與核准情境；環境與時間允許時再 direct-code deploy 到 Foundry Agent Service，否則由講師 demo
+2. **Lab 2（local-only）**：只接上一個 Copilot SDK harness factory，使用者可詢問個人花費與節省建議、申請提高限額，管理者從另一個頁面核准
+3. **Lab 3（optional）**：讓同一個 Copilot SDK harness 改用 Foundry Model，重跑費用查詢與核准情境；完成模型切換且 hosting 就緒後，再選配 direct-code deploy 到 Foundry Agent Service，否則由講師 demo
 
 ### 課程重點
 
@@ -27,7 +27,6 @@
 - 建議課前先在 `starter/.venv` 安裝 `starter/requirements.txt`，並預先執行 `python -m copilot download-runtime`
 - Lab 1 的現成工具無需認證；Copilot Chat 分析需在 VS Code 登入有 Copilot 權限的 GitHub 帳號，不需 SDK token 或 Azure 資源
 - Lab 2 的頁面與 mock 核准可在本機執行；**SDK 聊天需要 `COPILOT_GITHUB_TOKEN` 或 organizer BYOK**，不需正式 org 權限或 SSO
-- 選配 `copilot-usage --live` 沿用個人 `COPILOT_GITHUB_TOKEN`，不呼叫模型；查的是帳號配額，不是 per-key 花費或 carol 的 mock 預算，無適用憑證／資料可跳過
 - Lab 3 優先使用主辦單位預配置的 Foundry model 與 Managed Identity，且 `starter/azure.yaml` 需要 **azd >= 1.27.1**
 - 不要使用 admin / billing token
 
@@ -56,10 +55,10 @@
 
 ### Overview
 
-This 90-minute workshop has exactly three labs:
+This workshop has exactly three labs. Progress through the core outcomes, with optional work guided by learner readiness and available environments:
 
 1. **Lab 1 (no coding)**: use ready-made local tools and GitHub Copilot Chat to investigate synthetic cost, seat, and budget data and produce a one-page decision brief
-2. **Lab 2 (local-only)**: connect one Copilot SDK harness factory; a user asks about spending and savings, requests a higher limit, and an administrator approves on a separate page; optionally read their own real Copilot account quota
+2. **Lab 2 (local-only)**: connect one Copilot SDK harness factory; a user asks about spending and savings, requests a higher limit, and an administrator approves on a separate page
 3. **Lab 3 (optional)**: switch the same Copilot SDK harness to a Foundry model and repeat the cost/approval flow; proceed with direct-code hosting when prepared, or watch the instructor demo
 
 ### Highlights
@@ -69,7 +68,6 @@ This 90-minute workshop has exactly three labs:
 - Explore cost visibility, seat review, attribution, budgets, and conditional savings estimates with synthetic data; no additional platform installation required
 - Pre-event setup should install `starter/requirements.txt` into `starter/.venv` and pre-cache `python -m copilot download-runtime`
 - Lab 1 analysis uses signed-in VS Code Copilot Chat; Lab 2 uses the local SDK harness with Copilot auth or organizer BYOK. Neither requires Azure hosting
-- Optional `copilot-usage --live` reuses the learner's own `COPILOT_GITHUB_TOKEN` without a model call. Account quota is separate from per-key spending and the mock budget; skip when credentials or quota data are unavailable
 - Optional Hosted deployment uses `starter/azure.yaml`, `starter/main.py`, and `InvocationAgentServerHost`, and requires **azd >= 1.27.1**; the model-only step runs in the local demo
 - The only new Foundry integration is the model provider; Toolbox and additional services are out of scope. Using a Foundry model locally does not require agent hosting or azd
 
