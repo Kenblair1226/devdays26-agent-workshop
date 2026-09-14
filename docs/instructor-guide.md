@@ -28,7 +28,7 @@
 | 43–47 | 開啟 User / Admin 兩個頁面 | 角色分開、同一個 local demo |
 | 47–52 | 使用者詢問花費與節省建議 | carol 已用 14、限額 20、剩餘 6 |
 | 52–60 | 使用者提高額度申請、管理者核准 | pending 不改額度；approve 後 30／14／16 |
-| 60–63 | 使用者再次詢問、核對 audit | 完整閉環而非只看「申請成功」 |
+| 60–63 | 使用者再次詢問、核對 audit；選配示範個人 Copilot 配額 | 完整閉環；分清真實帳號配額與 mock 預算 |
 | 63–68 | 同一個 demo 切換到 Foundry Model | 模型來源變更，個人工具和核准規則不變 |
 | 68–75 | 原有的選配 Hosted 部署／講師 demo | 模型呼叫與 agent hosting 分別驗收 |
 | 75–78 | 比較前後結果與費用邊界 | 仍是 20 → 30／14／16，Azure inference 另計 |
@@ -119,6 +119,20 @@ Copilot Chat 無法使用時，pair programming 或講師示範，不交換 toke
 模型不穩時，改用標示為「直接提交 mock 申請（不經模型）」的表單演示後半段，同時說明前半段 SDK 聊天未成功。重啟 process 可恢復初始額度和新的角色連結；不要做 blanket retries 造成多筆申請。
 
 Seat 回收、通用 `chat` 的 `/approve`、`approval-demo` 都留作課後或最後 8 分鐘的選配進階內容。**Lab 2 必做只有個人查詢、節省建議、提高限額與 admin approve。**
+
+### 加一點臨場感：唯讀查詢自己的 Copilot 配額（選配）
+
+放在第 60–63 分的核對時段，或讓提早完成者加做；不多加一個 Lab、TODO 或管理權限。講師用已啟用 venv／設定 `PYTHONPATH` 的第二個終端示範，保留正在跑的 User/Admin demo。使用自己的 `COPILOT_GITHUB_TOKEN`，保留 `FINOPS_BACKEND=mock`、`FINOPS_ALLOW_REAL_WRITES=false`：
+
+```powershell
+python -m finops_agent copilot-usage --live
+```
+
+講解重點：「左邊 carol 的 USD 14 是範例；這個終端讀到的是目前 token 所屬帳號的 Copilot 配額。」指出 `usedRequests`、`remainingPercentage` 與 `resetDate`，也示範缺欄位／unlimited 要怎麼保留未知；不宣稱是這把 key 的花費、token 明細或完整組織帳單。
+
+時間允許就先查一次，用既有 Copilot demo 問一題，再手動查一次。不保證立即扣固定次數，也不把前後差額當成該題費用：其他工具共用帳號、回報延遲與 entitlement 政策都會影響結果。查詢本身不呼叫模型；不要為了數字有變一直重送問題。Foundry 推論不會反映在 Copilot 配額裡。
+
+這段使用 SDK `account.getQuota`，不直接呼叫未公開的帳務 endpoint，也不把 token 或真實配額塞進 model tools。若沒有自己的 Copilot token、GitHub 未提供 quota、政策不允許或查詢 timeout，直接跳過；不臨時改用 admin token 或讓全班共用講師 token。課前先手動確認願意公開的示範帳號；不收集學員配額、截圖或真實輸出。
 
 ## Lab 3：Foundry Model 切換與選配部署
 

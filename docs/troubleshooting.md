@@ -28,6 +28,11 @@
 | 無資料的期間回傳限制 | 正確行為；不要把 unavailable 改成零 |
 | 第一次 `ask` 等候 runtime | 課前先 `python -m copilot download-runtime`；檢查 runtime download 網路，別另開 headless CLI |
 | 缺 `COPILOT_GITHUB_TOKEN` | 依 [認證步驟](environment-prep.md#lab-2-模型認證) 設定個人 Copilot token；不使用 GitHub admin token |
+| `copilot-usage` 要求 `--live` | 正常保護；只有明確執行 `copilot-usage --live` 才查真實帳號配額，仍保留 mock backend 和關閉 real writes |
+| `Copilot account quota unavailable` | 檢查新終端的個人 token、效期、Copilot Requests／帳號政策、runtime 和網路；命令不借用既有 CLI 登入。這段是選配，權限或資料不可用就跳過，不換 admin token |
+| `quota_snapshots` 沒有 `premium_interactions` | 配額種類依 GitHub 回傳為準，可有 chat／completions 等；整份空白會明確回報 unavailable，不代表零用量 |
+| 問完一題，真實配額卻沒有變 | GitHub 可能延遲回報，配額與模型政策也不同；不保證每題扣固定次數，不要重送 prompt 追數字 |
+| 真實配額和 carol／Foundry 金額不一致 | 不同帳：CLI 讀 token 所屬 Copilot 帳號配額，carol 是 mock 預算，Foundry 推論另由 Azure 計費；request counters 不是美元或 per-key 帳單 |
 | BYOK 沒生效／模型 404 | 選 `FINOPS_MODEL_PROVIDER=foundry-key`，完整設定 `AZURE_OPENAI_ENDPOINT`、`AZURE_OPENAI_API_KEY`、`MODEL_NAME`；後者是 Azure deployment name |
 | 改了 provider 但 demo 還是舊模型 | 停止並重啟程序，重新開啟 User/Admin 連結；正在跑的 session 不會讀入新的 shell 設定 |
 | Foundry Model identity 401／403 | 主辦方確認課前開發者登入與 inference 權限；本機不是自動取得 Managed Identity，不要現場盲目新增 role |
@@ -63,4 +68,4 @@ bash 將 `\` 改為 `/`。Lab 1 免寫程式，不需 restore；Lab 2 編輯先�
 
 ## 無認證／無 Azure 時
 
-可執行現成 tools 與 demo 的直接申請／admin 核准；Lab 1 Copilot Chat 需 GitHub 登入，Lab 2 SDK 聊天需授權或 BYOK。由已登入的同學或講師示範時不要交換秘密。沒有活動 Foundry 環境就觀摩 Lab 3，不把本機 fake-model 彩排或 HTTP readiness 宣稱為雲端部署成功。
+可執行現成 tools 與 demo 的直接申請／admin 核准；Lab 1 Copilot Chat 需 GitHub 登入，Lab 2 SDK 聊天需授權或 BYOK。沒有個人 Copilot token 就跳過選配配額查詢，不把 mock 資料當成查詢結果。由已登入的同學或講師示範時不要交換秘密。沒有活動 Foundry 環境就觀摩 Lab 3，不把本機 fake-model 彩排或 HTTP readiness 宣稱為雲端部署成功。

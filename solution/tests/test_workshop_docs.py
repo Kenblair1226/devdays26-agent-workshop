@@ -115,3 +115,31 @@ def test_lab3_includes_model_switch_without_requiring_new_tool_services() -> Non
         assert required in lab3
     assert "先不加入 Toolbox 或其他服務" in lab3
     assert "azd ai toolbox" not in lab3
+
+
+def test_lab2_live_quota_is_optional_and_separate_from_mock_budgets() -> None:
+    root = Path(__file__).parents[2]
+    text = (root / "docs" / "student-lab.md").read_text(encoding="utf-8")
+    lab2 = text.split("## Lab 2", 1)[1].split("## Lab 3", 1)[0]
+    for required in (
+        "配額查詢選配",
+        "python -m finops_agent copilot-usage --live",
+        "COPILOT_GITHUB_TOKEN",
+        "FINOPS_BACKEND=mock",
+        "FINOPS_ALLOW_REAL_WRITES=false",
+        "account.getQuota",
+        "usedRequests",
+        "remainingPercentage",
+        "resetDate",
+        "as_of",
+        "per-key",
+        "不呼叫模型",
+        "延遲",
+        "不要附到 Copilot Chat",
+        "另外開一個終端",
+    ):
+        assert required in lab2
+    for name in ("environment-prep.md", "instructor-guide.md", "architecture.md"):
+        doc = (root / "docs" / name).read_text(encoding="utf-8")
+        assert "copilot-usage --live" in doc, name
+        assert "account.getQuota" in doc, name

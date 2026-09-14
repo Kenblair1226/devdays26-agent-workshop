@@ -92,6 +92,18 @@ python -m finops_agent ask "目前本月的範例費用是多少？"
 
 若 SDK 認證或網路不可用，可用頁面上「直接提交 mock 申請（不經模型）」表單繼續演示人工核准；必須明說聊天尚未成功。頁面資料 refresh 不會消耗 model tokens。
 
+### 選配：查自己的 Copilot 帳號配額
+
+沿用方式 A 的 `COPILOT_GITHUB_TOKEN`，執行 `python -m finops_agent copilot-usage --live`。這是明確選入的真實唯讀查詢，即使 `FINOPS_BACKEND=mock` 也會連線 GitHub；但不建立 model session、不查 organization billing、不調整任何預算。CLI 載入 `starter/.env`，process environment 仍優先；不新增 `github_copilot_key` 變數，也不借用其他 CLI 的登入。
+
+若 demo 正在執行，在另一個已啟用 venv、設定 `PYTHONPATH` 的終端查詢；只設在原 shell 的 token 不會自動出現在新 shell，需重新隱藏輸入，或使用自己的被忽略 `.env`。保留 `FINOPS_BACKEND=mock` 和 `FINOPS_ALLOW_REAL_WRITES=false`。
+
+SDK `account.getQuota` 回傳目前帳號可見的配額種類、已用次數、剩餘比例和可用的重設日期；不是每把 key 的消費，也不是美元或 AI-credit 帳單。個人 Copilot 帳號／組織政策未提供配額、憑證不適用或網路不通時，命令回報 unavailable 並以非零狀態結束，不回傳 mock 數字或零。不為這段練習額外申請 billing/admin 權限；只用 Foundry BYOK 的學員可直接跳過。
+
+若要的是可對帳的花費，需另外考慮 billing scope 與授權：[GitHub billing usage](https://docs.github.com/en/rest/billing/usage) 的 user endpoints 只涵蓋個人自購方案；由 organization／enterprise 付費的使用量不在個人 billing endpoint 裡。這不是本段配額查詢要開放的權限。
+
+課前可由講師手動預跑一次，確認示範帳號能讀取且願意展示；不蒐集全班結果或分發共用 token。真實用量不要存進 repo、教材、Chat 附件或 Lab 1 evidence。
+
 ### 方式 B：主辦方 BYOK
 
 Foundry 的 `.env` 統一使用下面三個名稱，並明確選擇 `foundry-key`：

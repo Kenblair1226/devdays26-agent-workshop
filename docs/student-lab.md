@@ -19,7 +19,7 @@
 | 0–8 分 | 情境、架構與安全界線 | 分辨 model runtime、tools、hosting |
 | 8–15 分 | 啟動課前環境 | 本機 `cost` 成功 |
 | 15–37 分 | Lab 1：用 Copilot 做 FinOps 調查 | 一頁有數據依據的決策摘要 |
-| 37–63 分 | Lab 2：使用者／管理者 demo | 查費用、節省建議、提高限額、核准後更新 |
+| 37–63 分 | Lab 2：使用者／管理者 demo | 查費用、節省建議、提高限額、核准後更新；選配查自己的 Copilot 配額 |
 | 63–78 分 | Lab 3：Foundry Model 與選配部署 | 換模型重跑同一個情境，再自行部署或觀摩 demo |
 | 78–86 分 | 講師延伸示範與討論 | 資料、權限、觀測的限制 |
 | 86–90 分 | 成果核對、清理 | 關閉程序、移除認證 |
@@ -160,6 +160,8 @@ python -m pytest starter/checks/test_lab1.py -q
 
 這是本機 mock 角色演示，**不是正式的 SSO 登入或 RBAC 權限系統**，資料也不會寫到真實 GitHub。
 
+如果想看看「我現在真的用了多少 Copilot」，最後還有一個選配的唯讀查詢。它看的是你自己帳號的配額，不是 carol；不用增加 coding TODO，也不用組織管理者權限。
+
 ### 1. 補幾行，把 SDK 接上來（6 分鐘）
 
 工具、提示詞、畫面和核准邏輯都準備好了。打開 `starter/src/finops_agent/demo_connection.py`，找到 `build_demo_harness()`，把 TODO 換成：
@@ -212,7 +214,7 @@ User 由使用者操作，Admin 由管理者保管。**不要把 admin link 交�
 
 回到 User 頁面，等它自動更新成 **approved（已核准）**。這時限額應該是 **30**、已用 **14** 不變、剩餘 **16**。再問一次：「我的申請核准了嗎？現在可用額度是多少？」看看 Agent 是否真的重新查了資料，而不是重複剛才的答案。
 
-### 5. 確認整個流程真的跑完了（3 分鐘）
+### 5. 核對結果，再看看自己的 Copilot 配額（3 分鐘，配額查詢選配）
 
 | 階段 | 限額 | 已用 | 剩餘 | 狀態 |
 | --- | --- | --- | --- | --- |
@@ -225,6 +227,35 @@ User 由使用者操作，Admin 由管理者保管。**不要把 admin link 交�
 頁面每三秒更新一次，只是在讀 mock 狀態，不會一直呼叫模型或消耗 model tokens。
 
 如果模型連不上，先別卡在這裡。可以改用畫面上的 **直接提交 mock 申請（不經模型）** 表單，繼續體驗待核准、核准和餘額更新。只是要說清楚：這是備援操作，不代表 SDK 聊天已經成功。重啟 demo 會清除申請並恢復範例額度；這組 UI 和核准 API 只在 localhost 使用，不會跟著 Lab 3 部署。
+
+#### 選配：這次不看範例，查一下自己的帳號
+
+提早完成的同學可以加做，或一起看講師示範；不影響 Checkpoint 2，也不延長 Lab 2。**保留正在跑 demo 的終端**，另外開一個終端，回到 repo root，照前面啟用 `starter/.venv`、設定 `PYTHONPATH`。沿用自己的 `starter/.env`，或照 [認證步驟](environment-prep.md#lab-2-模型認證) 在新終端隱藏輸入同一個 token。
+
+這裡沿用教材的 **`COPILOT_GITHUB_TOKEN`**，不新增 `github_copilot_key` 變數。保留 `FINOPS_BACKEND=mock`、`FINOPS_ALLOW_REAL_WRITES=false`，再跑下面這行；PowerShell 和 bash 相同：
+
+```powershell
+python -m finops_agent copilot-usage --live
+```
+
+`--live` 表示你同意這一次查詢真實帳號配額。命令只透過 SDK 的 `account.getQuota` 讀取資料，**不呼叫模型、不修改 seat／budget，也不把結果交給聊天模型**。它不會改用已登入的 CLI 帳號或 `GITHUB_ADMIN_TOKEN`；缺少個人 token 就會明確停下來。
+
+在輸出的 `quota_snapshots` 找找這些欄位。配額種類由 GitHub 回傳，可能是 `premium_interactions`、`chat` 或 `completions`，不是每個帳號都一樣：
+
+| 欄位 | 怎麼看 |
+| --- | --- |
+| `usedRequests` / `entitlementRequests` | 該配額本期已用／包含的 request 次數；不是這個 key 專屬的帳單 |
+| `remainingPercentage` | GitHub 回傳的剩餘比例；不是剩餘美元 |
+| `isUnlimitedEntitlement` 或 `entitlementRequests=-1` | 這種配額沒有固定 entitlement 上限，不要自行算剩餘次數 |
+| `overage` | 額外使用的 request 次數，不是超支金額 |
+| `resetDate` | GitHub 提供的重設日期；沒回傳就當作未知 |
+| `retrieved_at` / `as_of` | 查詢時間／資料更新時間；後者未知時為 `null`，不能說是即時帳務 |
+
+想看前後對照，可以先查一次，回 User 頁面用 **Copilot provider** 正常問一個問題，再手動查一次。**不要為了讓數字跳動不停送 prompt**：配額可能延遲更新，其他 IDE／CLI 的使用也可能一起計入，差額不能當成本輪聊天的 token 數或花費。
+
+這裡是「**token 所屬帳號的配額**」，不是 per-key usage、AI credits 明細或美元帳單；和 carol 的 USD 14／20 → 30 完全分開。只用 Foundry key 的同學可跳過；Foundry 推論由 Azure 計費，不會反映在這個 Copilot 查詢。
+
+遇到權限限制、沒有配額資料或 timeout，就停在這裡，不換 admin token、不把缺資料解讀成零。真實輸出只在自己的終端看，**不要附到 Copilot Chat、User 頁面或提交 Git，也不用交給講師**。SDK 的 [用量與配額說明](https://github.com/github/copilot-sdk/blob/main/docs/features/usage-and-billing.md#account-quota-and-premium-interactions) 有完整欄位參考。
 
 想多玩一點，可以課後再看 `chat` 的 `/plans`、`/approve` 和 seat 管理；今天不用把這些全部做完。
 

@@ -49,6 +49,12 @@ flowchart LR
 
 `demo.html` 沒有前端 build 或外部 CDN；「直接提交 mock 申請」是明確標示、不經模型的備援，不是默默替代 SDK 問答。Lab 3 模型切換沿用這個本機 UI；選配 Hosted 部署不包含 UI 或 approval API。
 
+選配的 `copilot-usage --live` 是**另一條 CLI-only 唯讀路徑**：`copilot_usage.py` 以明確的 `COPILOT_GITHUB_TOKEN` 呼叫 SDK `account.getQuota`，不建立 session、不註冊為 tool、不加入 browser API，也不建立組織 FinOps client。查詢需 `--live`，不會因為設定 token 就自動發生；`FINOPS_BACKEND=mock` 維持不變。
+
+這條路徑重用隔離的 runtime environment，以暫存 base/working directory 和 `use_logged_in_user=False` 啟動 SDK runtime，查詢／失敗／取消後關閉並清理。不繼承 GitHub admin 或 Foundry key，不改用 ambient GitHub token／已登入帳號。回應只保留 SDK 配額欄位並標示 `scope=copilot_account`、`mode=live_read_only`、`retrieved_at`；provider 更新時間未知，以 `as_of=null` 呈現。缺資料／不支援／認證或連線失敗明確回報，錯誤不轉印原始 transport payload。
+
+配額種類與可見資料依帳號而定，不能把 request counters／overage 換算成美元、原始 tokens 或 per-key usage。它不是 org billing 報表，也不和 carol mock 金額或 Azure inference 費用合併；結果不傳給模型或寫入報表。
+
 ## Foundry Model：只替換推論來源
 
 `FINOPS_MODEL_PROVIDER` 的三條路徑都由既有 `CopilotFinOpsHarness` 管理，沒有新增 Toolbox／MCP 連線。`copilot` 使用 `COPILOT_GITHUB_TOKEN`／`COPILOT_MODEL`，是 Lab 1/2 的 Azure-free 主線。Foundry 則統一讀取 `AZURE_OPENAI_ENDPOINT`／`MODEL_NAME`：key 模式另需 `AZURE_OPENAI_API_KEY`；identity 模式不用 key，透過非同步 bearer-token callback，在本機使用開發者憑證、Hosted 使用 Managed Identity。
@@ -86,8 +92,9 @@ flowchart LR
 | Lab 2 使用者／管理者角色 | 本機啟動期不同 capabilities；核准需人點擊 | 正式 GitHub／Entra 登入或 real org 寫入權限 |
 | Lab 1 Copilot Chat 分析 | VS Code 的 GitHub Copilot 登入、只附合成資料 | SDK 已完成接線或 GitHub org API 權限 |
 | 個人 Copilot model calling | `COPILOT_GITHUB_TOKEN` | GitHub organization billing 管理權限 |
+| 選配 Copilot account quota | `copilot-usage --live`、個人 `COPILOT_GITHUB_TOKEN` | per-key 帳單、org billing 權限或 model tool |
 | BYOK model calling | API key 或 Managed Identity | Foundry hosting 已部署 |
-| Real GitHub read adapter | instructor CLI、最小權限 token | 允許寫入 |
+| Real organization billing read adapter | instructor CLI、最小權限 token | 允許寫入 |
 | Real write | write flag + payload policy + human approval | 模型能自己核准 |
 | Foundry hosted sample | 每次請求獨立、固定 mock backend | production 多租戶授權或 durable audit |
 
@@ -111,6 +118,7 @@ Real billing endpoint 回傳的是報表，不是即時 meter；`retrieved_at` �
 
 - [Copilot SDK 與官方範例](https://github.com/github/copilot-sdk)
 - [SDK isolation / multi-tenancy](https://github.com/github/copilot-sdk/blob/main/docs/setup/multi-tenancy.md)
+- [SDK usage / account quota](https://github.com/github/copilot-sdk/blob/main/docs/features/usage-and-billing.md#account-quota-and-premium-interactions)
 - [SDK Foundry model provider / BYOK](https://github.com/github/copilot-sdk/blob/main/docs/auth/byok.md)
 - [Foundry invocations adapter](https://learn.microsoft.com/azure/foundry/agents/how-to/add-protocol-adapter)
 - [Foundry code deployment](https://learn.microsoft.com/azure/foundry/agents/quickstarts/quickstart-deploy-own-code)
@@ -122,4 +130,4 @@ Real billing endpoint 回傳的是報表，不是即時 meter；`retrieved_at` �
 
 ## 課程範圍
 
-Lab 1 以成本、seats、UBB budgets、部門歸屬與節省建議為分析情境。本課程使用 mock tools、人工核准流程、Foundry model provider 與選配 direct-code hosting；不加入 Toolbox、檢索、正式 SSO、跨組織同步或即時帳務資料。
+Lab 1 以成本、seats、UBB budgets、部門歸屬與節省建議為分析情境。本課程使用 mock tools、人工核准流程、選配的個人 Copilot 配額唯讀查詢、Foundry model provider 與選配 direct-code hosting；不加入 Toolbox、檢索、正式 SSO、跨組織同步或即時帳務資料。
