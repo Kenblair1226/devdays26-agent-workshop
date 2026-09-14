@@ -233,7 +233,7 @@ class CopilotFinOpsHarness:
 
 
 def _openai_base_url(endpoint: str) -> str:
-    """Accept a resource/project root or its complete OpenAI v1 base URL."""
+    """Accept an Azure root or a complete OpenAI-compatible v1 base URL."""
     endpoint = endpoint.strip().rstrip("/")
     parsed = urlsplit(endpoint)
     if (
@@ -248,6 +248,8 @@ def _openai_base_url(endpoint: str) -> str:
             "AZURE_OPENAI_ENDPOINT must be an HTTPS base URL without credentials, "
             "query parameters or fragments"
         )
+    if parsed.path == "/v1":
+        return endpoint
     suffix = "/openai/v1"
     root_path = parsed.path.removesuffix(suffix)
     is_project = (
@@ -257,8 +259,9 @@ def _openai_base_url(endpoint: str) -> str:
     )
     if root_path and not is_project:
         raise ValueError(
-            "AZURE_OPENAI_ENDPOINT must be a resource/project root or an "
-            "/openai/v1 base URL, not a completions, responses or agent URL"
+            "AZURE_OPENAI_ENDPOINT must be an Azure resource/project root or a "
+            "complete /openai/v1 or /v1 base URL, not a completions, responses "
+            "or agent URL"
         )
     return endpoint if parsed.path.endswith(suffix) else endpoint + suffix
 

@@ -315,6 +315,14 @@ def test_incomplete_foundry_config_never_falls_back_to_copilot(
             "https://resource.services.ai.azure.com/api/projects/lab/openai/v1/",
             "https://resource.services.ai.azure.com/api/projects/lab/openai/v1",
         ),
+        (
+            "https://api.example.test/v1",
+            "https://api.example.test/v1",
+        ),
+        (
+            "https://api.example.test/v1/",
+            "https://api.example.test/v1",
+        ),
     ],
 )
 def test_foundry_base_url_adds_v1_once(endpoint, expected) -> None:
@@ -334,6 +342,10 @@ def test_foundry_base_url_adds_v1_once(endpoint, expected) -> None:
         "https://example.test/openai/v1/responses",
         "https://example.test/openai/deployments/model",
         "https://example.test/api/projects/lab/agents/finops/endpoint",
+        "https://example.test/v1/chat/completions",
+        "https://example.test/v1/responses",
+        "https://example.test/v1/models",
+        "https://example.test/v1beta",
     ],
 )
 def test_foundry_endpoint_rejects_non_base_urls(endpoint) -> None:
