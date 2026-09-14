@@ -29,8 +29,10 @@
 | 47–52 | 使用者詢問花費與節省建議 | carol 已用 14、限額 20、剩餘 6 |
 | 52–60 | 使用者提高額度申請、管理者核准 | pending 不改額度；approve 後 30／14／16 |
 | 60–63 | 使用者再次詢問、核對 audit | 完整閉環而非只看「申請成功」 |
-| 63–78 | Lab 3 或講師 demo | remote invocation 或明確標記的觀摩 |
-| 78–86 | 治理／觀測延伸與 Q&A | 說得出 production 還缺什麼 |
+| 63–68 | 同一個 demo 切換到 Foundry Model | 模型來源變更，個人工具和核准規則不變 |
+| 68–75 | 原有的選配 Hosted 部署／講師 demo | 模型呼叫與 agent hosting 分別驗收 |
+| 75–78 | 比較前後結果與費用邊界 | 仍是 20 → 30／14／16，Azure inference 另計 |
+| 78–86 | 模型選擇、治理與 Q&A | 不加入其他服務或第四個 Lab |
 | 86–90 | 收尾與清理 | 無遺留 token、host 程序 |
 
 ## 40 人現場操作
@@ -118,15 +120,19 @@ Copilot Chat 無法使用時，pair programming 或講師示範，不交換 toke
 
 Seat 回收、通用 `chat` 的 `/approve`、`approval-demo` 都留作課後或最後 8 分鐘的選配進階內容。**Lab 2 必做只有個人查詢、節省建議、提高限額與 admin approve。**
 
-## Lab 3 demo 與觀測
+## Lab 3：Foundry Model 切換與選配部署
 
-課前依 [環境準備](environment-prep.md) 建立 40 個 learner environment 及講師備援。從完成版本執行同一份 `request.example.json`，比較本機／雲端 evidence，指認 `invocation_id` 與 `tool_calls`。`azd ai agent monitor` 顯示近期 console logs；`--follow` 才持續串流。
+本次只加 Foundry Model；**不建立 Toolbox、政策檢索或新的 tracing integration**。課前依 [模型準備](environment-prep.md#lab-3-foundry-model-課前準備) 核對 endpoint、deployment name、inference 權限與 SDK 的 Responses/tool-calling 相容性，不能只在 portal 手動問一句就視為完整接通。
 
-要看 App Insights 分散式 trace，必須課前配置該環境 exporter、權限與保留規則；不要把 console logging 宣稱為完整 token trace。Tool logs 只記名稱與結果類型，不記 keys、approval token 或整份企業報表。
+第 63 分鐘先停止 Lab 2 demo，切換 `FINOPS_MODEL_PROVIDER=foundry-identity` 再啟動；本機使用開發者身分，Hosted 才用 Managed Identity。已配 key 的備案則用 `foundry-key`。重新開啟兩個角色連結，提醒學員重啟會重設 mock 申請，不是模型替使用者還原預算。
+
+用同一段問題重跑：查個人花費、節省建議、要求提高到 30、admin approve。數字應維持初始 20／14／6 → 核准後 30／14／16；可以比較措辭、evidence 引用與延遲，**不要只因模型不同就宣稱較省**，更不要把合成 GitHub 帳務數字當成這次 Azure inference 的費用。
+
+只換模型不需要部署 Hosted Agent。剩餘時間與預建 hosting 就緒時，再從完成版本執行 `request.example.json`、查看 `invocation_id` 與 `tool_calls`；`azd ai agent monitor` 只看近期 console logs，不宣稱完整 token trace。Tool logs 不記 keys、approval token 或整份企業報表。
 
 Hosted 範例採**每次 invocation 獨立 mock state**，不提供 Lab 2 的瀏覽器頁面或跨使用者共享核准 API；學生不會透過 remote endpoint 寫真實 seats。若進一步產品化，需要登入／授權、可信部門來源、durable approval store、API concurrency 控制與完整 retention policy。
 
-若全場 Foundry 不可用：展示課前錄影、request/response 和 source，明確標記「demo」，不要說現場部署成功。
+如果模型連線不通，停止 demo 後明確切回 `copilot`，恢復原本的 `COPILOT_MODEL` 和個人 token；或展示講師課前錄影。不要暗中 fallback 然後宣稱 Foundry 成功。若只有 hosting 不可用，保留已完成的模型 demo，hosting 部分改成觀摩即可。
 
 ## 真實 GitHub adapter：講師選配
 

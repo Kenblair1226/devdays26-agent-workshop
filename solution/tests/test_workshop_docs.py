@@ -66,3 +66,25 @@ def test_lab2_is_one_connection_and_a_visible_approval_flow() -> None:
     ):
         assert required in lab2
     assert "編輯 `starter/src/finops_agent/sdk_tools.py`" not in lab2
+
+
+def test_lab3_includes_model_switch_without_requiring_new_tool_services() -> None:
+    root = Path(__file__).parents[2]
+    text = (root / "docs" / "student-lab.md").read_text(encoding="utf-8")
+    lab3 = text.split("## Lab 3", 1)[1].split("## 跟不上", 1)[0]
+    for required in (
+        "Foundry Model",
+        "foundry-identity",
+        "FOUNDRY_PROJECT_ENDPOINT",
+        "AZURE_AI_MODEL_DEPLOYMENT_NAME",
+        "python -m finops_agent demo",
+        "FINOPS_BACKEND",
+        "FINOPS_ALLOW_REAL_WRITES",
+        "pending",
+        "Copilot",
+        "重啟",
+        "選配",
+    ):
+        assert required in lab3
+    assert "先不加入 Toolbox 或其他服務" in lab3
+    assert "azd ai toolbox" not in lab3

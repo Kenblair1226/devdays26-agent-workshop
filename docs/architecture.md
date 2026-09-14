@@ -1,6 +1,6 @@
 # FinOps Agent 架構與信任邊界
 
-**Copilot SDK 是 Agent harness；Foundry 是 hosting。** Direct code deployment 不需要維護自訂 Dockerfile、sidecar 或 CLI TCP server；SDK 仍會自管其必要的 runtime process，並非完全移除了 runtime。
+**Copilot SDK 是 Agent harness；Foundry Model 是可替換的模型來源，Foundry Agent Service 則是選配 hosting。** 本機可先切換模型，不需部署 Agent。Direct code deployment 不需要維護自訂 Dockerfile、sidecar 或 CLI TCP server；SDK 仍會自管其必要的 runtime process，並非完全移除了 runtime。
 
 ## 本機：先用現成工具分析，再讓 SDK 選擇工具
 
@@ -47,7 +47,15 @@ flowchart LR
 
 同一個 demo process 保留 SDK conversation、mock budgets、pending requests；頁面輪詢只讀這些資料，不重新呼叫模型。核准前不改額度，核准後不重設 consumed；重複核准不再次執行，過時的 budget snapshot 拒絕核准。退出程序後一切重設。
 
-`demo.html` 沒有前端 build 或外部 CDN；「直接提交 mock 申請」是明確標示、不經模型的備援，不是默默替代 SDK 問答。Lab 3 不包含此 UI 或 approval API。
+`demo.html` 沒有前端 build 或外部 CDN；「直接提交 mock 申請」是明確標示、不經模型的備援，不是默默替代 SDK 問答。Lab 3 模型切換沿用這個本機 UI；選配 Hosted 部署不包含 UI 或 approval API。
+
+## Foundry Model：只替換推論來源
+
+`FINOPS_MODEL_PROVIDER` 的三條路徑都由既有 `CopilotFinOpsHarness` 管理，沒有新增 Toolbox／MCP 連線。`copilot` 是 Lab 1/2 的 Azure-free 主線；`foundry-key` 使用完整 model API URL 與 API key；`foundry-identity` 使用 project endpoint 及非同步 bearer-token callback，本機透過開發者憑證、Hosted 透過 Managed Identity。
+
+切換 provider 不增加工具或擴大 user scope，模型仍不能核准。Process 啟動後不做 live model switch，需停止並重啟 demo；舊 conversation、mock requests 與角色 capabilities 不會延續。身分、連線錯誤會明確回報，不偷偷改用 Copilot。
+
+GitHub billing fixture 是被分析的資料；Azure inference 是 Agent 自己產生的費用，兩者分開。`FINOPS_BACKEND=mock` 與 `FINOPS_ALLOW_REAL_WRITES=false` 在換模型時不變。
 
 ## Foundry：相同 harness，獨立 request state
 
@@ -101,6 +109,7 @@ Real billing endpoint 回傳的是報表，不是即時 meter；`retrieved_at` �
 
 - [Copilot SDK 與官方範例](https://github.com/github/copilot-sdk)
 - [SDK isolation / multi-tenancy](https://github.com/github/copilot-sdk/blob/main/docs/setup/multi-tenancy.md)
+- [SDK Foundry model provider / BYOK](https://github.com/github/copilot-sdk/blob/main/docs/auth/byok.md)
 - [Foundry invocations adapter](https://learn.microsoft.com/azure/foundry/agents/how-to/add-protocol-adapter)
 - [Foundry code deployment](https://learn.microsoft.com/azure/foundry/agents/quickstarts/quickstart-deploy-own-code)
 - [GitHub AI-credit billing usage](https://docs.github.com/en/rest/billing/usage)
@@ -111,4 +120,4 @@ Real billing endpoint 回傳的是報表，不是即時 meter；`retrieved_at` �
 
 ## 課程範圍
 
-Lab 1 以成本、seats、UBB budgets、部門歸屬與節省建議為分析情境。本課程使用 mock tools、人工核准流程與 direct-code hosting，不包含正式 SSO、跨組織同步或即時帳務資料。
+Lab 1 以成本、seats、UBB budgets、部門歸屬與節省建議為分析情境。本課程使用 mock tools、人工核准流程、Foundry model provider 與選配 direct-code hosting；不加入 Toolbox、檢索、正式 SSO、跨組織同步或即時帳務資料。

@@ -27,6 +27,12 @@
 | 第一次 `ask` 等候 runtime | 課前先 `python -m copilot download-runtime`；檢查 runtime download 網路，別另開 headless CLI |
 | 缺 `COPILOT_GITHUB_TOKEN` | 依 [認證步驟](environment-prep.md#lab-2-模型認證) 設定個人 Copilot token；不使用 GitHub admin token |
 | BYOK 沒生效／模型 404 | 明確選 `FINOPS_MODEL_PROVIDER=foundry-key`；確認 endpoint 與 deployment name，不只設定 key |
+| 改了 provider 但 demo 還是舊模型 | 停止並重啟程序，重新開啟 User/Admin 連結；正在跑的 session 不會讀入新的 shell 設定 |
+| Foundry Model identity 401／403 | 主辦方確認課前開發者登入與 inference 權限；本機不是自動取得 Managed Identity，不要現場盲目新增 role |
+| Foundry endpoint 404 | identity 用 project 根 endpoint；key 用包含 `/openai/v1/` 的 model URL；兩者都不是 Hosted invoke endpoint |
+| 重啟後額度回到 20、舊連結失效 | 正常，mock 狀態與 role capabilities 隨程序重設；不是更換模型自動修改 GitHub 帳務 |
+| 模型通了但不能 Hosted deploy | 模型 inference 與 agent hosting 分開；可先完成模型比較，再觀摩部署 |
+| 切回 Copilot 後仍然 model error | 停止程序，改回 `FINOPS_MODEL_PROVIDER=copilot`、帳號可用的 `COPILOT_MODEL` 與 token，再啟動 |
 | Agent 回答沒有 evidence | 確認 instructions 和 tool schemas；看 `tool_calls`，不要只靠在 prompt 加「請正確回答」 |
 | demo 使用者要求移除 seat 或自稱 admin | 正確地拒絕；使用者模型只有個人查詢與提高額度申請工具，seat 操作留作進階 CLI 範例 |
 | `unknown plan` | `ask` 是一次性；改在同一個 `chat` 完成 planning / approval；重啟不保留 mock plans |

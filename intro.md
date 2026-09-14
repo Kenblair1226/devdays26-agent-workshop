@@ -8,7 +8,7 @@
 
 1. **Lab 1（免寫程式）**：使用現成 FinOps tools 產生合成資料分析包，透過 GitHub Copilot Chat 調查成本、seat 與 budget，交付一頁決策摘要
 2. **Lab 2（local-only）**：只接上一個 Copilot SDK harness factory，使用者可詢問個人花費與節省建議、申請提高限額，管理者從另一個頁面核准
-3. **Lab 3（optional）**：從 `starter/` direct-code deploy 到 Microsoft Foundry Agent Service，進行 remote invoke 與 monitor；若環境不可用、部署過慢或時間不足，由講師 demo predeployed endpoint
+3. **Lab 3（optional）**：讓同一個 Copilot SDK harness 改用 Foundry Model，重跑費用查詢與核准情境；環境與時間允許時再 direct-code deploy 到 Foundry Agent Service，否則由講師 demo
 
 ### 課程重點
 
@@ -16,6 +16,7 @@
 - 透過成本總覽、seat 使用檢視與預算分析情境，用合成資料比較節省方案
 - 練習 human-in-the-loop mock governance boundary
 - 了解 official Foundry direct-code shape：`azure.yaml` + `main.py` + `InvocationAgentServerHost`
+- Foundry 擴充只加入模型來源切換，不增加 Toolbox 或其他服務；工具與核准流程維持不變
 - 知道 `solution/` 是答案與 recovery，不是主要操作路徑
 
 ### 重要前提
@@ -58,7 +59,7 @@ This 90-minute workshop has exactly three labs:
 
 1. **Lab 1 (no coding)**: use ready-made local tools and GitHub Copilot Chat to investigate synthetic cost, seat, and budget data and produce a one-page decision brief
 2. **Lab 2 (local-only)**: connect one Copilot SDK harness factory; a user asks about spending and savings, requests a higher limit, and an administrator approves on a separate page
-3. **Lab 3 (optional)**: direct-code deploy the hosted agent from `starter/` to Microsoft Foundry Agent Service, then remotely invoke and monitor it; if resources or time are limited, the instructor demos a predeployed endpoint
+3. **Lab 3 (optional)**: switch the same Copilot SDK harness to a Foundry model and repeat the cost/approval flow; proceed with direct-code hosting when prepared, or watch the instructor demo
 
 ### Highlights
 
@@ -67,7 +68,8 @@ This 90-minute workshop has exactly three labs:
 - Explore cost visibility, seat review, attribution, budgets, and conditional savings estimates with synthetic data; no additional platform installation required
 - Pre-event setup should install `starter/requirements.txt` into `starter/.venv` and pre-cache `python -m copilot download-runtime`
 - Lab 1 analysis uses signed-in VS Code Copilot Chat; Lab 2 uses the local SDK harness with Copilot auth or organizer BYOK. Neither requires Azure hosting
-- Lab 3 uses the official direct-code Foundry shape with `starter/azure.yaml`, `starter/main.py`, and `InvocationAgentServerHost`, and requires **azd >= 1.27.1**
+- Optional Hosted deployment uses `starter/azure.yaml`, `starter/main.py`, and `InvocationAgentServerHost`, and requires **azd >= 1.27.1**; the model-only step runs in the local demo
+- The only new Foundry integration is the model provider; Toolbox and additional services are out of scope. Using a Foundry model locally does not require agent hosting or azd
 
 ### Prerequisites
 

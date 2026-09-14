@@ -1,6 +1,6 @@
 # 學員手冊：打造 Copilot FinOps Agent
 
-接下來的 **90 分鐘，我們一起做 3 個 Labs**：先用 GitHub Copilot Chat 看懂費用資料，再接上 Copilot SDK，試試「使用者申請額度、管理者核准」，最後把 Agent 放到 Foundry 上跑。
+接下來的 **90 分鐘，我們一起做 3 個 Labs**：先用 GitHub Copilot Chat 看懂費用資料，再接上 Copilot SDK，試試「使用者申請額度、管理者核准」，最後把同一個 harness 的模型換成 Foundry Model；環境和時間允許時，再把 Agent 部署到 Foundry。
 
 不用擔心要從零開始寫程式：**Lab 1 的工具都準備好了；Lab 2 只補幾行 SDK 接線**。需要參考時，可以看 `solution/` 裡的完整版本。
 
@@ -20,7 +20,7 @@
 | 8–15 分 | 啟動課前環境 | 本機 `cost` 成功 |
 | 15–37 分 | Lab 1：用 Copilot 做 FinOps 調查 | 一頁有數據依據的決策摘要 |
 | 37–63 分 | Lab 2：使用者／管理者 demo | 查費用、節省建議、提高限額、核准後更新 |
-| 63–78 分 | Lab 3：Foundry | 自行部署或觀摩同一程式的 demo |
+| 63–78 分 | Lab 3：Foundry Model 與選配部署 | 換模型重跑同一個情境，再自行部署或觀摩 demo |
 | 78–86 分 | 講師延伸示範與討論 | 資料、權限、觀測的限制 |
 | 86–90 分 | 成果核對、清理 | 關閉程序、移除認證 |
 
@@ -216,11 +216,56 @@ User 由使用者操作，Admin 由管理者保管。**不要把 admin link 交�
 
 想多玩一點，可以課後再看 `chat` 的 `/plans`、`/approve` 和 seat 管理；今天不用把這些全部做完。
 
-## Lab 3：部署到 Foundry Agent Service（15 分鐘，可改 Demo）
+## Lab 3：換成 Foundry Model，再選配部署（15 分鐘，可改 Demo）
 
-到了第 63 分鐘，先聽講師說明：環境準備好了就自己部署；如果資源還沒開、時間不夠，或部署等了超過 5 分鐘，就改看講師示範。**不用在現場從零建立 Azure 資源**，前兩個 Lab 的成果已經可以留在本機使用。
+這段只加 **Foundry Model**，先不加入 Toolbox 或其他服務。重點是看見：**模型可以換，SDK harness、工具和人工核准流程不必重寫。** Lab 1/2 照原本的 Copilot 路線完成即可，不會因為你沒有 Azure 權限就卡住。
 
-### 1. 看看這次會部署什麼
+到了第 63 分鐘，先聽講師說明。主辦方已準備好模型和權限就自己操作；如果沒有，直接觀摩講師 demo。這裡的「換模型」只需要模型可用，**不需要先把 Agent 部署到雲端**，也不用現場建立 Azure 資源。
+
+### 1. 換模型，重跑熟悉的使用者／管理者情境（5 分鐘）
+
+先在 Lab 2 的終端按 `Ctrl+C` 停止 demo。**重啟會重設 mock 申請、回到限額 20／已用 14／剩餘 6，兩個角色連結也會更新**；這是重啟造成的，不是換模型會修改帳務。
+
+下面用主辦方課前提供的 **Foundry project endpoint** 和 **model deployment name**。`foundry-identity` 在本機使用你已登入、已授權的開發者身分；部署後才使用 Managed Identity。若主辦方採 API key，改照 [Foundry Model 認證方式](environment-prep.md#lab-3-foundry-model-課前準備) 設定即可。
+
+PowerShell（仍在 repo 根目錄、使用同一個 venv 與 `PYTHONPATH`）：
+
+```powershell
+$env:FINOPS_BACKEND = "mock"
+$env:FINOPS_ALLOW_REAL_WRITES = "false"
+$env:FINOPS_MODEL_PROVIDER = "foundry-identity"
+$env:FOUNDRY_PROJECT_ENDPOINT = "https://<account>.services.ai.azure.com/api/projects/<project>"
+$env:AZURE_AI_MODEL_DEPLOYMENT_NAME = "<model-deployment-name>"
+python -m finops_agent demo
+```
+
+bash：
+
+```bash
+export FINOPS_BACKEND=mock
+export FINOPS_ALLOW_REAL_WRITES=false
+export FINOPS_MODEL_PROVIDER=foundry-identity
+export FOUNDRY_PROJECT_ENDPOINT="https://<account>.services.ai.azure.com/api/projects/<project>"
+export AZURE_AI_MODEL_DEPLOYMENT_NAME="<model-deployment-name>"
+python -m finops_agent demo
+```
+
+把 `<...>` 換成課前分配給你的值，不要填 GitHub 模型名稱或 Hosted Agent endpoint。開啟終端顯示的**新 User／Admin 連結**，再試同一組問題：
+
+1. User 問：「我目前花費多少？額度還剩多少？」
+2. User 問：「有什麼節省 AI credits 的建議？」
+3. User 說：「請提高到 USD 30，理由是下週有 migration 專案。」
+4. 確認仍是 **pending、限額 20**，再由 Admin 核准，看到 **限額 30、已用 14、剩餘 16**。
+
+回答的措辭可以不同，但 evidence、工具權限與核准規則不能變。模型不能自己 approve，也不能把 carol 變成管理者。看見卡片還不夠：它們本來就能從 mock 資料讀出來，要有**經 SDK 聊天得到的回覆**，才算完成模型切換；不要把備援表單當成模型呼叫成功。
+
+記得分清楚兩筆帳：畫面上的 GitHub Copilot credits／budget 是**被分析的合成資料**；Agent 呼叫 Foundry Model 產生的 inference 費用由 Azure 計費。把 carol 的 budget 提到 30，不會調整 Azure quota 或限制 Azure 費用，也不能據此宣稱換模型比較省。
+
+如果 Foundry 模型或權限不通，不要反覆重試。看講師預備的 demo，或停止程序後改回 `FINOPS_MODEL_PROVIDER=copilot`，確認 `COPILOT_MODEL` 和 `COPILOT_GITHUB_TOKEN` 是原本可用的值，再重新啟動。回到 Copilot 是備案，不算 Foundry Model 已連上。
+
+### 2. 選配：把 Agent 部署到 Foundry（7 分鐘）
+
+只有主辦方已完成 hosting 環境準備才繼續；否則看講師既有 endpoint 即可。部署等候超過 5 分鐘也切換 demo，不犧牲最後的成果核對。
 
 打開 `starter/azure.yaml`，找到這幾行：
 
@@ -235,9 +280,9 @@ codeConfiguration:
 
 有一點和 Lab 2 不同：這個 Hosted 範例的**每次請求都使用獨立的 mock 狀態**，不會共用聊天紀錄或核准結果。Lab 2 的管理者頁面不會一起上雲，也不要把它當成正式的核准服務。真實寫入仍只限講師的受控流程。
 
-### 2. 部署後，問它同一個問題
+#### 部署後，問它同一個問題
 
-先確認主辦方已把你的**個人環境**綁定到 `starter/.azure/`，前兩個 checkpoints 也都完成了。這裡直接用附好的 `starter/request.example.json`，省去手動處理 JSON 引號和編碼的麻煩。
+先停止剛才的本機 demo，再確認主辦方已把你的**個人環境**綁定到 `starter/.azure/`，前兩個 checkpoints 也都完成了。這裡直接用附好的 `starter/request.example.json`，省去手動處理 JSON 引號和編碼的麻煩。
 
 PowerShell：
 
@@ -271,11 +316,13 @@ bash（整段執行完會回到原目錄）：
 
 收到回應後，找找 `reply`、`invocation_id`、`tool_calls` 和 `backend=mock`。把答案和 Lab 1 的數字對照一下，再用 monitor 看同一次請求呼叫了哪些工具。
 
-Monitor 預設只取近期 console logs，想持續看才加 `--follow`。完整的 distributed tracing 要事先設定，別把 console logs 當成完整的模型 token trace。
+Monitor 預設只取近期 console logs，想持續看才加 `--follow`。這次不另外建立 tracing 服務，也別把 console logs 當成完整的模型 token trace。
 
-### 3. 做到這裡就可以了
+### 3. 換了什麼？哪些事情沒有變？（3 分鐘）
 
-你可以自己完成部署和呼叫，也可以跟著講師示範，指出程式入口、Managed Identity、tool call 和資料依據。兩種方式都能學到這段的重點；如果這次沒有雲端資源，就把成果記為觀摩，不要把本機結果說成「已部署 Foundry」。
+能說出「換的是 model provider，SDK、mock 資料與人工核准流程不變」，就是這段的核心成果。也請分清楚 **本機 harness 呼叫 Foundry Model** 與 **Hosted Agent 部署完成**，兩件事要分開記錄。
+
+你可以自行完成，或跟著講師看相同流程。如果只完成模型切換，就記錄模型呼叫成功、hosting 未執行；如果沒有雲端資源，就記為觀摩，不要把本機結果說成「已部署 Foundry」。
 
 ## 跟不上時，先用參考答案接著做
 

@@ -1,6 +1,6 @@
 # 環境準備與課前檢查
 
-學員約 40 人，課程 90 分鐘。**課前完成安裝與認證**，不要把現場時間花在下載 SDK。課程的主線為現成工具 + Copilot Chat 分析、本機 Copilot SDK harness、選配 Foundry 部署。
+學員約 40 人，課程 90 分鐘。**課前完成安裝與認證**，不要把現場時間花在下載 SDK。課程的主線為現成工具 + Copilot Chat 分析、本機 Copilot SDK harness、Foundry Model 切換及原有的選配部署。不加入 Toolbox、檢索或新的觀測服務。
 
 ## 學員必要環境
 
@@ -11,8 +11,9 @@
 | Copilot SDK 與其 pinned runtime | 報表工具不需要 | 必要 | 必要 |
 | 瀏覽器與可用的 localhost port | Copilot Chat 使用 VS Code | 8098，User/Admin 兩分頁 | 依主辦方環境 |
 | 個人 Copilot token 或主辦方 BYOK | 不需要 | 模型問答時需要 | 視選定 model provider |
-| Azure CLI、azd ≥1.27.1、Foundry extension | 不需要 | 不需要 | hands-on 才需要 |
-| 預建 Foundry project、model、RBAC | 不需要 | 不需要 | 每人一套，或講師 demo |
+| Azure CLI 登入或模型 key | 不需要 | Copilot 主線不需要 | Foundry 模型呼叫需其一 |
+| azd ≥1.27.1、Foundry extension、hosting 環境 | 不需要 | 不需要 | 選配 Hosted 部署才需要 |
+| 預建 Foundry project、model、RBAC | 不需要 | Copilot 主線不需要 | 個人配發的環境，或講師 demo |
 
 Lab 1 的 `brief` 只產生資料，學員另外在 VS Code Copilot Chat 附檔分析；不需 SDK token。Lab 2 是**在本機執行 harness**，不是 LLM 離線運行。使用 GitHub Copilot 模型時會消耗自己的 Copilot 額度；BYOK 的 inference 費用由 Azure/model provider 計費。這與範例中被分析的 GitHub billing data 是不同帳。
 
@@ -95,6 +96,27 @@ python -m finops_agent ask "目前本月的範例費用是多少？"
 
 Lab 3 的 Managed Identity 使用 `FINOPS_MODEL_PROVIDER=foundry-identity`、`FOUNDRY_PROJECT_ENDPOINT`、`AZURE_AI_MODEL_DEPLOYMENT_NAME`。只有這種 provider 才會載入 Azure credential；Lab 1/2 的 Copilot 路線不需要 Azure。
 
+## Lab 3 Foundry Model 課前準備
+
+只使用主辦方**已部署、已完成 tool-calling 彩排**的模型，不現場選 region、申請配額或新增模型。此 harness 使用 OpenAI-compatible Responses API，並非 Foundry catalog 裡每一個模型都一定相容。模型名稱必須填 Azure 的 deployment name；同一個模型來源切換不需要改 UI 或工具。
+
+| 方式 | 必要設定 | 身分／注意事項 |
+| --- | --- | --- |
+| `foundry-identity`（課程優先） | `FOUNDRY_PROJECT_ENDPOINT` + `AZURE_AI_MODEL_DEPLOYMENT_NAME` | 本機以課前已登入、具權限的開發者身分取得 token；Hosted 才用 Managed Identity |
+| `foundry-key`（主辦方備案） | `FOUNDRY_MODEL_URL` + `FOUNDRY_API_KEY` + `COPILOT_MODEL` | URL 要包含 `/openai/v1/`；模型填 deployment name，key 只存於當前 shell 或被忽略的本機 `.env` |
+
+`FOUNDRY_PROJECT_ENDPOINT` 要填 project 根 endpoint，不要附 `/openai/v1`；harness 會補上該路徑。`FOUNDRY_MODEL_URL` 則是完整 model API base URL。兩者不是 agent invoke endpoint，不能互換。
+
+使用 identity 的學員需課前自行登入 Azure CLI 等受支援的開發者憑證來源，由主辦方核對 inference 權限；**有 portal 閱讀權限不代表能呼叫模型**。課程程式不會替學員執行登入或建立 role assignment。若政策要求禁用 keys，就不啟用 key 備案。
+
+切換前用 `Ctrl+C` 停止 demo，依學員手冊設定 provider 後重新啟動。Mock budgets／requests 與角色連結會重設，這不是把不同模型的對話或核准狀態接續使用。不要一邊跑 server 一邊改 shell 變數，既有 process 不會自動取得新值。
+
+若使用 key 備案，在主辦方提供 endpoint 與 deployment name 後，PowerShell 以 `Read-Host -MaskInput` 讀入 `FOUNDRY_API_KEY`；bash 以 `read -rsp` 讀入後 export。不要把真實 key 寫進示範命令、截圖、聊天室或 Git。模型 key 不是 GitHub admin token。
+
+課前需用**實際認證的 SDK 聊天**跑完查費用、節省建議、申請及 admin approve。只跑 mock tests、看到卡片或 `/readiness` 200，不代表 Foundry 模型與權限可用。
+
+使用 Foundry Model 的 inference 費用與 Copilot 額度是兩筆帳，GitHub budget 不限制 Azure 費用。限制課堂重試／並行呼叫，依模型 deployment 的實際 RPM／TPM 準備 40 人容量；不保證切換後一定更便宜。
+
 ## 主辦方：40 套 Foundry 環境
 
 Foundry hands-on 不是現場從零 provision。建議由 **1 位講師 + 3–4 位 TA** 支援，每位 TA 負責約 10–13 人；另準備一個講師 demo 與少數備用環境。
@@ -103,7 +125,7 @@ Foundry hands-on 不是現場從零 provision。建議由 **1 位講師 + 3–4 
 | --- | --- |
 | T−7 天 | 確認地區、hosted/code deployment 支援、模型配額、使用成本上限；完成一套 golden environment |
 | T−3 天 | 預建 40 套個人 project/environment，隔離登入與權限；確認 model deployment 名稱、Managed Identity 權限與模型呼叫 |
-| T−1 天 | 每台/每人安裝 Python、依賴及 runtime；確認 Lab 1 附件分析、Lab 2 User/Admin 完整閉環與 8098 port；對 40 套環境做小批量 deployment/invoke 彩排 |
+| T−1 天 | 每台/每人安裝 Python、依賴及 runtime；確認 Lab 1 附件分析、Lab 2 User/Admin、Foundry Model 切換及回復；若要部署，另做小批量 deployment/invoke 彩排 |
 | 開場前 | 講師 endpoint 與 logs 可用，備妥範例回應或錄影、checkpoint recovery、TA 分區表 |
 
 只存在 Azure 資源還不夠：每人本機 `starter/.azure/` 必須已綁定正確的個人 azd environment。主辦方依 [Foundry Hosted Agent 部署指南](https://learn.microsoft.com/azure/foundry/agents/how-to/deploy-hosted-agent) 建立與綁定，`starter/azure.yaml` 是 code deployment 設定。不要把含 secrets 的 `.azure/` 複製給全班、提交到 Git，或讓全班共用講師的 admin identity。
@@ -114,7 +136,7 @@ Foundry hands-on 不是現場從零 provision。建議由 **1 位講師 + 3–4 
 
 ## Lab 3 可用條件與 fallback
 
-第 63 分鐘，若多數學員已完成 Lab 2、個人環境已就緒，就進行 Lab 3。任何資源未開通或部署等候超過 5 分鐘，改用講師預部署端點；若講師雲端也不可用，播放課前錄影並對照 `main.py` / `azure.yaml`。要明確標示這是觀摩，不是現場已部署。
+第 63 分鐘，先確認模型與 inference 權限，再做 Foundry Model 切換；只有 hosting 也預備好才進入部署。模型或權限不可用時看講師模型 demo，或明確切回 Copilot；hosting 未開通或部署等候超過 5 分鐘則使用講師預部署端點。若講師雲端也不可用，播放課前錄影。模型呼叫、hosting 部署與觀摩要分別標示，不互相代替。
 
 Cloud readiness 必須包含一次真正的 remote invocation；本機 `/readiness` 只代表 HTTP host 啟動，不能證明 Managed Identity、模型授權或完整 tool calling 已成功。
 

@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | 1 | 用現成工具 + Copilot Chat 調查成本、seats、budgets，交付決策摘要 | 本機 mock 資料；Chat 需 GitHub 登入，免寫程式 |
 | 2 | 一次 harness 接線：查費用／節省建議 → 申請提高限額 → 管理者 approve | 本機使用者／管理者頁面，Copilot 或 BYOK model |
-| 3 | Direct-code deploy、remote invoke、觀測 | Foundry；時間或資源不足改講師 demo |
+| 3 | 同一個 harness 換成 Foundry Model，再選配 direct-code deploy | 預建模型；時間或資源不足改講師 demo |
 
 **學員入口：[環境準備](docs/environment-prep.md) → [學員手冊](docs/student-lab.md)。**
 講師請先讀 [90 分鐘 runbook](docs/instructor-guide.md)，並參考 [架構](docs/architecture.md) 與 [疑難排解](docs/troubleshooting.md)。[intro.md](intro.md) 保留中英文活動簡介。
@@ -35,6 +35,8 @@ Lab 1 聚焦成本總覽、seat review、部門歸屬、預算與 what-if。課�
 
 Lab 2 接線後執行 `python -m finops_agent demo`，開啟終端提供的 User / Admin 兩個連結。User 扮演 carol：已用 USD 14、限額 20、剩餘 6；要求提高至 30 後先維持 pending，管理者確認後變成 **限額 30、剩餘 16**。不需複製 plan ID、token 或輸入 JSON。
 
+Lab 3 只新增 **Foundry Model 切換**，不加入 Toolbox 或其他服務。依 [課前模型設定](docs/environment-prep.md#lab-3-foundry-model-課前準備) 選用既有 `foundry-identity`／`foundry-key` provider，重啟同一個本機 demo；SDK、個人工具、mock 資料和 admin approval 不變。呼叫 Foundry 模型不等於 Hosted Agent 已部署，原有 hosting 留作選配。
+
 ## 安全與邊界
 
 預設 `FINOPS_BACKEND=mock`。Lab 1 的工具不需認證，但 Copilot Chat 需要 GitHub 登入；Lab 2 `ask` / `chat` 需要 SDK 的 Copilot 或 BYOK 認證。前兩個 Lab 不需 Azure hosting。SDK 自管 runtime，沒有額外 headless service 或自訂 Dockerfile。Lab 3 的 hosted 範例固定使用 mock、每次 invocation 獨立。
@@ -42,5 +44,7 @@ Lab 2 接線後執行 `python -m finops_agent demo`，開啟終端提供的 User
 `demo` 只綁定 localhost，User / Admin 使用不同的啟動期 capability；模型只持有個人查詢／申請工具，沒有 approve。這是單機角色演示，不是正式登入系統。狀態重啟即重設；不要將此頁面或 admin link 公開，也不要把 demo 核准 API 部署到 Foundry。
 
 真實 GitHub 操作僅限 instructor CLI，寫入還需 write flag、有效的計畫核准及明確的人確認。**不提交 token、公司資料、session history 或 audit logs。** Credits 不是原始 tokens；合成資料的價格不是正式 invoice。
+
+Foundry Model 的 inference 費用由 Azure 計費，與 Agent 分析的 GitHub Copilot credits／budget 分開；提高 GitHub 限額不會改變 Azure quota，也不限制 Azure 支出。
 
 Foundry 的個人環境、Managed Identity 與 remote invocation 需由主辦方課前準備；教材與本機演練不能替代活動環境的實際開通。
