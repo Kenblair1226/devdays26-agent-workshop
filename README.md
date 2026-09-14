@@ -37,6 +37,8 @@ Lab 2 接線後執行 `python -m finops_agent demo`，開啟終端提供的 User
 
 Lab 3 只新增 **Foundry Model 切換**，不加入 Toolbox 或其他服務。依 [課前模型設定](docs/environment-prep.md#lab-3-foundry-model-課前準備) 選用既有 `foundry-identity`／`foundry-key` provider，重啟同一個本機 demo；SDK、個人工具、mock 資料和 admin approval 不變。呼叫 Foundry 模型不等於 Hosted Agent 已部署，原有 hosting 留作選配。
 
+Foundry 的 `.env` 使用 `AZURE_OPENAI_ENDPOINT`、`AZURE_OPENAI_API_KEY`、`MODEL_NAME`；key 模式選 `FINOPS_MODEL_PROVIDER=foundry-key`，identity 模式不需 API key。`MODEL_NAME` 填 Azure deployment name，GitHub Copilot 的認證與 `COPILOT_MODEL` 維持原本設定。
+
 ## 安全與邊界
 
 預設 `FINOPS_BACKEND=mock`。Lab 1 的工具不需認證，但 Copilot Chat 需要 GitHub 登入；Lab 2 `ask` / `chat` 需要 SDK 的 Copilot 或 BYOK 認證。前兩個 Lab 不需 Azure hosting。SDK 自管 runtime，沒有額外 headless service 或自訂 Dockerfile。Lab 3 的 hosted 範例固定使用 mock、每次 invocation 獨立。

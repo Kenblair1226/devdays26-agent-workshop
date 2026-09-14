@@ -124,7 +124,7 @@ Seat 回收、通用 `chat` 的 `/approve`、`approval-demo` 都留作課後或�
 
 本次只加 Foundry Model；**不建立 Toolbox、政策檢索或新的 tracing integration**。課前依 [模型準備](environment-prep.md#lab-3-foundry-model-課前準備) 核對 endpoint、deployment name、inference 權限與 SDK 的 Responses/tool-calling 相容性，不能只在 portal 手動問一句就視為完整接通。
 
-第 63 分鐘先停止 Lab 2 demo，切換 `FINOPS_MODEL_PROVIDER=foundry-identity` 再啟動；本機使用開發者身分，Hosted 才用 Managed Identity。已配 key 的備案則用 `foundry-key`。重新開啟兩個角色連結，提醒學員重啟會重設 mock 申請，不是模型替使用者還原預算。
+第 63 分鐘先停止 Lab 2 demo，切換 `FINOPS_MODEL_PROVIDER=foundry-identity` 並設定 `AZURE_OPENAI_ENDPOINT`、`MODEL_NAME` 再啟動；本機使用開發者身分，Hosted 才用 Managed Identity。已配 key 的備案則用 `foundry-key`，再加上 `AZURE_OPENAI_API_KEY`。GitHub Copilot 的 `COPILOT_MODEL` 不用改成 Azure deployment name。重新開啟兩個角色連結，提醒學員重啟會重設 mock 申請，不是模型替使用者還原預算。
 
 用同一段問題重跑：查個人花費、節省建議、要求提高到 30、admin approve。數字應維持初始 20／14／6 → 核准後 30／14／16；可以比較措辭、evidence 引用與延遲，**不要只因模型不同就宣稱較省**，更不要把合成 GitHub 帳務數字當成這次 Azure inference 的費用。
 

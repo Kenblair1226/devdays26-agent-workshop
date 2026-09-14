@@ -75,8 +75,8 @@ def test_lab3_includes_model_switch_without_requiring_new_tool_services() -> Non
     for required in (
         "Foundry Model",
         "foundry-identity",
-        "FOUNDRY_PROJECT_ENDPOINT",
-        "AZURE_AI_MODEL_DEPLOYMENT_NAME",
+        "AZURE_OPENAI_ENDPOINT",
+        "MODEL_NAME",
         "python -m finops_agent demo",
         "FINOPS_BACKEND",
         "FINOPS_ALLOW_REAL_WRITES",

@@ -90,11 +90,20 @@ python -m finops_agent ask "目前本月的範例費用是多少？"
 
 ### 方式 B：主辦方 BYOK
 
-明確設定 `FINOPS_MODEL_PROVIDER=foundry-key`、`FOUNDRY_MODEL_URL`（OpenAI-compatible `/openai/v1/` endpoint）、`FOUNDRY_API_KEY`，以及 `COPILOT_MODEL`（**Azure deployment name**）。金鑰只放目前 shell 或本機被忽略的 `starter/.env`，不要放教材、Git、prompt 或群組聊天室。
+Foundry 的 `.env` 統一使用下面三個名稱，並明確選擇 `foundry-key`：
+
+```env
+FINOPS_MODEL_PROVIDER=foundry-key
+AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com
+AZURE_OPENAI_API_KEY=<your-api-key>
+MODEL_NAME=<your-model-deployment-name>
+```
+
+`MODEL_NAME` 是 **Azure deployment name**，不是 GitHub 模型 ID。Endpoint 可填資源根網址，或包含 `/openai/v1/` 的完整 base URL，程式會補齊路徑且不會重複加上。金鑰只放目前 shell 或本機被忽略的 `starter/.env`，不要放教材、Git、prompt 或群組聊天室。
 
 `.env.example` 是設定說明，不會自動生效；複製為 `starter/.env` 後由 CLI 載入。Process environment 優先，不要同時留下不同 provider 的舊值。
 
-Lab 3 的 Managed Identity 使用 `FINOPS_MODEL_PROVIDER=foundry-identity`、`FOUNDRY_PROJECT_ENDPOINT`、`AZURE_AI_MODEL_DEPLOYMENT_NAME`。只有這種 provider 才會載入 Azure credential；Lab 1/2 的 Copilot 路線不需要 Azure。
+Lab 3 的 identity 路線使用 `FINOPS_MODEL_PROVIDER=foundry-identity`、`AZURE_OPENAI_ENDPOINT`、`MODEL_NAME`；`AZURE_OPENAI_API_KEY` 留空即可。只有這種 provider 才會載入 Azure credential；Lab 1/2 的 Copilot 路線仍使用 `COPILOT_GITHUB_TOKEN` 和 `COPILOT_MODEL`，不需要 Azure。
 
 ## Lab 3 Foundry Model 課前準備
 
@@ -102,16 +111,20 @@ Lab 3 的 Managed Identity 使用 `FINOPS_MODEL_PROVIDER=foundry-identity`、`FO
 
 | 方式 | 必要設定 | 身分／注意事項 |
 | --- | --- | --- |
-| `foundry-identity`（課程優先） | `FOUNDRY_PROJECT_ENDPOINT` + `AZURE_AI_MODEL_DEPLOYMENT_NAME` | 本機以課前已登入、具權限的開發者身分取得 token；Hosted 才用 Managed Identity |
-| `foundry-key`（主辦方備案） | `FOUNDRY_MODEL_URL` + `FOUNDRY_API_KEY` + `COPILOT_MODEL` | URL 要包含 `/openai/v1/`；模型填 deployment name，key 只存於當前 shell 或被忽略的本機 `.env` |
+| `foundry-identity`（課程優先） | `AZURE_OPENAI_ENDPOINT` + `MODEL_NAME` | 本機以課前已登入、具權限的開發者身分取得 token；Hosted 才用 Managed Identity，不需 API key |
+| `foundry-key`（主辦方備案） | `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_API_KEY` + `MODEL_NAME` | 模型填 deployment name，key 只存於當前 shell 或被忽略的本機 `.env` |
 
-`FOUNDRY_PROJECT_ENDPOINT` 要填 project 根 endpoint，不要附 `/openai/v1`；harness 會補上該路徑。`FOUNDRY_MODEL_URL` 則是完整 model API base URL。兩者不是 agent invoke endpoint，不能互換。
+`AZURE_OPENAI_ENDPOINT` 接受 HTTPS 資源根網址（例如 `https://<resource>.openai.azure.com`）、Foundry project 根 endpoint（`https://<account>.services.ai.azure.com/api/projects/<project>`），或上述網址的 `/openai/v1/` base URL。不要填 `/responses`、`/chat/completions`、deployment 路徑或 Hosted Agent invoke endpoint，也不要在 URL 放 key 或 query string。
+
+Hosted 部署時，`azure.yaml` 會把 azd 的 `AZURE_AI_MODEL_DEPLOYMENT_NAME` 對應到應用程式的 `MODEL_NAME`；這個 azd 來源變數維持原名。若未另設 `AZURE_OPENAI_ENDPOINT`，harness 仍可使用平台注入的 `FOUNDRY_PROJECT_ENDPOINT`，不用為了改 `.env` 命名而重建環境。
+
+舊 `.env` 的 `FOUNDRY_MODEL_URL`／`FOUNDRY_API_KEY`／`COPILOT_MODEL` 完整組合仍可相容讀取，並顯示遷移提醒；新 key 設定優先，請整組改用新名稱，不要混用新 endpoint 與舊 key。Identity 路線保留平台 endpoint／舊 deployment 變數的相容來源。範例與課程命令一律使用新名稱。
 
 使用 identity 的學員需課前自行登入 Azure CLI 等受支援的開發者憑證來源，由主辦方核對 inference 權限；**有 portal 閱讀權限不代表能呼叫模型**。課程程式不會替學員執行登入或建立 role assignment。若政策要求禁用 keys，就不啟用 key 備案。
 
 切換前用 `Ctrl+C` 停止 demo，依學員手冊設定 provider 後重新啟動。Mock budgets／requests 與角色連結會重設，這不是把不同模型的對話或核准狀態接續使用。不要一邊跑 server 一邊改 shell 變數，既有 process 不會自動取得新值。
 
-若使用 key 備案，在主辦方提供 endpoint 與 deployment name 後，PowerShell 以 `Read-Host -MaskInput` 讀入 `FOUNDRY_API_KEY`；bash 以 `read -rsp` 讀入後 export。不要把真實 key 寫進示範命令、截圖、聊天室或 Git。模型 key 不是 GitHub admin token。
+若使用 key 備案，在主辦方提供 endpoint 與 deployment name 後，PowerShell 以 `Read-Host -MaskInput` 讀入 `AZURE_OPENAI_API_KEY`；bash 以 `read -rsp` 讀入後 export。不要把真實 key 寫進示範命令、截圖、聊天室或 Git。模型 key 不是 GitHub admin token。
 
 課前需用**實際認證的 SDK 聊天**跑完查費用、節省建議、申請及 admin approve。只跑 mock tests、看到卡片或 `/readiness` 200，不代表 Foundry 模型與權限可用。
 

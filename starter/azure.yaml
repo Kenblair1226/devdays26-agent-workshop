@@ -35,7 +35,7 @@ services:
         version: 2.0.0
     env:
       FINOPS_MODEL_PROVIDER: foundry-identity
-      AZURE_AI_MODEL_DEPLOYMENT_NAME: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}
+      MODEL_NAME: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}
       FINOPS_BACKEND: mock
       FINOPS_DATA_DIR: data
     container:

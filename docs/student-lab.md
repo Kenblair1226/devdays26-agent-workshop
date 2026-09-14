@@ -226,7 +226,7 @@ User 由使用者操作，Admin 由管理者保管。**不要把 admin link 交�
 
 先在 Lab 2 的終端按 `Ctrl+C` 停止 demo。**重啟會重設 mock 申請、回到限額 20／已用 14／剩餘 6，兩個角色連結也會更新**；這是重啟造成的，不是換模型會修改帳務。
 
-下面用主辦方課前提供的 **Foundry project endpoint** 和 **model deployment name**。`foundry-identity` 在本機使用你已登入、已授權的開發者身分；部署後才使用 Managed Identity。若主辦方採 API key，改照 [Foundry Model 認證方式](environment-prep.md#lab-3-foundry-model-課前準備) 設定即可。
+下面把主辦方課前提供的 **endpoint** 和 **model deployment name** 填進 `AZURE_OPENAI_ENDPOINT`、`MODEL_NAME`。`foundry-identity` 在本機使用你已登入、已授權的開發者身分，`AZURE_OPENAI_API_KEY` 可以留空；部署後才使用 Managed Identity。若主辦方採 API key，改照 [Foundry Model 認證方式](environment-prep.md#lab-3-foundry-model-課前準備) 的三個 `.env` 變數設定即可。
 
 PowerShell（仍在 repo 根目錄、使用同一個 venv 與 `PYTHONPATH`）：
 
@@ -234,8 +234,8 @@ PowerShell（仍在 repo 根目錄、使用同一個 venv 與 `PYTHONPATH`）：
 $env:FINOPS_BACKEND = "mock"
 $env:FINOPS_ALLOW_REAL_WRITES = "false"
 $env:FINOPS_MODEL_PROVIDER = "foundry-identity"
-$env:FOUNDRY_PROJECT_ENDPOINT = "https://<account>.services.ai.azure.com/api/projects/<project>"
-$env:AZURE_AI_MODEL_DEPLOYMENT_NAME = "<model-deployment-name>"
+$env:AZURE_OPENAI_ENDPOINT = "https://<account>.services.ai.azure.com/api/projects/<project>"
+$env:MODEL_NAME = "<model-deployment-name>"
 python -m finops_agent demo
 ```
 
@@ -245,12 +245,12 @@ bash：
 export FINOPS_BACKEND=mock
 export FINOPS_ALLOW_REAL_WRITES=false
 export FINOPS_MODEL_PROVIDER=foundry-identity
-export FOUNDRY_PROJECT_ENDPOINT="https://<account>.services.ai.azure.com/api/projects/<project>"
-export AZURE_AI_MODEL_DEPLOYMENT_NAME="<model-deployment-name>"
+export AZURE_OPENAI_ENDPOINT="https://<account>.services.ai.azure.com/api/projects/<project>"
+export MODEL_NAME="<model-deployment-name>"
 python -m finops_agent demo
 ```
 
-把 `<...>` 換成課前分配給你的值，不要填 GitHub 模型名稱或 Hosted Agent endpoint。開啟終端顯示的**新 User／Admin 連結**，再試同一組問題：
+把 `<...>` 換成課前分配給你的值，不要填 GitHub 模型名稱或 Hosted Agent endpoint。`AZURE_OPENAI_ENDPOINT` 也可填主辦方提供的 Azure OpenAI 資源根網址；`/openai/v1` 由程式補上，不會重複加。開啟終端顯示的**新 User／Admin 連結**，再試同一組問題：
 
 1. User 問：「我目前花費多少？額度還剩多少？」
 2. User 問：「有什麼節省 AI credits 的建議？」
@@ -344,7 +344,7 @@ Lab 1 沒有 code TODO，不需要還原。時間不夠時，先整理出一個�
 Azure 資源會由主辦方統一關閉，**不要自行對共用 resource group 執行 `azd down`**。
 
 ```powershell
-Remove-Item Env:COPILOT_GITHUB_TOKEN,Env:FOUNDRY_API_KEY -ErrorAction SilentlyContinue
+Remove-Item Env:COPILOT_GITHUB_TOKEN,Env:AZURE_OPENAI_API_KEY -ErrorAction SilentlyContinue
 ```
 
-bash 用 `unset COPILOT_GITHUB_TOKEN FOUNDRY_API_KEY`。如果用了課程專用的短期 token，課後也到 GitHub 把它撤銷。
+bash 用 `unset COPILOT_GITHUB_TOKEN AZURE_OPENAI_API_KEY`。如果用了課程專用的短期 token，課後也到 GitHub 把它撤銷。

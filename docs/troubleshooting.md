@@ -26,10 +26,11 @@
 | 無資料的期間回傳限制 | 正確行為；不要把 unavailable 改成零 |
 | 第一次 `ask` 等候 runtime | 課前先 `python -m copilot download-runtime`；檢查 runtime download 網路，別另開 headless CLI |
 | 缺 `COPILOT_GITHUB_TOKEN` | 依 [認證步驟](environment-prep.md#lab-2-模型認證) 設定個人 Copilot token；不使用 GitHub admin token |
-| BYOK 沒生效／模型 404 | 明確選 `FINOPS_MODEL_PROVIDER=foundry-key`；確認 endpoint 與 deployment name，不只設定 key |
+| BYOK 沒生效／模型 404 | 選 `FINOPS_MODEL_PROVIDER=foundry-key`，完整設定 `AZURE_OPENAI_ENDPOINT`、`AZURE_OPENAI_API_KEY`、`MODEL_NAME`；後者是 Azure deployment name |
 | 改了 provider 但 demo 還是舊模型 | 停止並重啟程序，重新開啟 User/Admin 連結；正在跑的 session 不會讀入新的 shell 設定 |
 | Foundry Model identity 401／403 | 主辦方確認課前開發者登入與 inference 權限；本機不是自動取得 Managed Identity，不要現場盲目新增 role |
-| Foundry endpoint 404 | identity 用 project 根 endpoint；key 用包含 `/openai/v1/` 的 model URL；兩者都不是 Hosted invoke endpoint |
+| Foundry endpoint 404／base URL 錯誤 | `AZURE_OPENAI_ENDPOINT` 可填 resource/project 根 endpoint 或完整 `/openai/v1/` base URL；不能含 query、key、`/responses`、`/chat/completions` 或 Hosted invoke 路徑 |
+| 出現舊 Foundry 設定遷移提醒 | 把 key 模式的舊三變數整組改成 `AZURE_OPENAI_ENDPOINT`、`AZURE_OPENAI_API_KEY`、`MODEL_NAME`；GitHub Copilot 仍使用 `COPILOT_MODEL` |
 | 重啟後額度回到 20、舊連結失效 | 正常，mock 狀態與 role capabilities 隨程序重設；不是更換模型自動修改 GitHub 帳務 |
 | 模型通了但不能 Hosted deploy | 模型 inference 與 agent hosting 分開；可先完成模型比較，再觀摩部署 |
 | 切回 Copilot 後仍然 model error | 停止程序，改回 `FINOPS_MODEL_PROVIDER=copilot`、帳號可用的 `COPILOT_MODEL` 與 token，再啟動 |

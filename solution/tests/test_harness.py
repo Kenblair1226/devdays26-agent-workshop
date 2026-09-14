@@ -1,5 +1,7 @@
 import asyncio
 import json
+from contextlib import AsyncExitStack
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -15,8 +17,23 @@ import finops_agent.harness as harness_module
 from finops_agent.budget_demo import BudgetDemo
 from finops_agent.clients import MockGitHubFinOpsClient
 from finops_agent.demo_connection import build_demo_harness
-from finops_agent.harness import CopilotFinOpsHarness
+from finops_agent.harness import CopilotFinOpsHarness, _openai_base_url
 from finops_agent.tools import FinOpsToolbox
+
+
+@pytest.fixture(autouse=True)
+def clean_model_settings(monkeypatch):
+    for name in (
+        "AZURE_OPENAI_ENDPOINT",
+        "AZURE_OPENAI_API_KEY",
+        "MODEL_NAME",
+        "FOUNDRY_MODEL_URL",
+        "FOUNDRY_API_KEY",
+        "COPILOT_MODEL",
+        "FOUNDRY_PROJECT_ENDPOINT",
+        "AZURE_AI_MODEL_DEPLOYMENT_NAME",
+    ):
+        monkeypatch.delenv(name, raising=False)
 
 
 @pytest.fixture
@@ -149,11 +166,18 @@ def test_no_token_does_not_silently_use_host_credentials(monkeypatch) -> None:
 def _configure_foundry(monkeypatch, provider: str) -> None:
     monkeypatch.setenv("FINOPS_MODEL_PROVIDER", provider)
     values = {
-        "FOUNDRY_MODEL_URL": "https://model.example.test/openai/v1/",
-        "FOUNDRY_API_KEY": "synthetic-foundry-key",
-        "COPILOT_MODEL": "workshop-key-deployment",
-        "FOUNDRY_PROJECT_ENDPOINT": "https://project.example.test/api/projects/lab",
-        "AZURE_AI_MODEL_DEPLOYMENT_NAME": "workshop-identity-deployment",
+        "AZURE_OPENAI_ENDPOINT": (
+            "https://model.example.test"
+            if provider == "foundry-key"
+            else "https://project.example.test/api/projects/lab"
+        ),
+        "AZURE_OPENAI_API_KEY": "synthetic-foundry-key",
+        "MODEL_NAME": (
+            "workshop-key-deployment"
+            if provider == "foundry-key"
+            else "workshop-identity-deployment"
+        ),
+        "COPILOT_MODEL": "separate-github-model",
     }
     for key, value in values.items():
         monkeypatch.setenv(key, value)
@@ -200,7 +224,9 @@ def test_foundry_model_preserves_scoped_tools_and_human_approval(
             assert model_provider["wire_api"] == "responses"
             if provider == "foundry-key":
                 assert config["model"] == "workshop-key-deployment"
-                assert model_provider["base_url"].endswith("/openai/v1/")
+                assert (
+                    model_provider["base_url"] == "https://model.example.test/openai/v1"
+                )
                 assert model_provider["api_key"] == "synthetic-foundry-key"
             else:
                 assert config["model"] == "workshop-identity-deployment"
@@ -232,6 +258,7 @@ def test_foundry_model_preserves_scoped_tools_and_human_approval(
     assert client["github_token"] is None
     assert client["use_logged_in_user"] is False
     assert "GITHUB_ADMIN_TOKEN" not in client["env"]
+    assert "AZURE_OPENAI_API_KEY" not in client["env"]
     assert "FOUNDRY_API_KEY" not in client["env"]
     if provider == "foundry-identity":
         assert credential_state["scopes"] == ["https://ai.azure.com/.default"] * 2
@@ -243,11 +270,11 @@ def test_foundry_model_preserves_scoped_tools_and_human_approval(
 @pytest.mark.parametrize(
     "provider,missing",
     [
-        ("foundry-key", "FOUNDRY_MODEL_URL"),
-        ("foundry-key", "FOUNDRY_API_KEY"),
-        ("foundry-key", "COPILOT_MODEL"),
-        ("foundry-identity", "FOUNDRY_PROJECT_ENDPOINT"),
-        ("foundry-identity", "AZURE_AI_MODEL_DEPLOYMENT_NAME"),
+        ("foundry-key", "AZURE_OPENAI_ENDPOINT"),
+        ("foundry-key", "AZURE_OPENAI_API_KEY"),
+        ("foundry-key", "MODEL_NAME"),
+        ("foundry-identity", "AZURE_OPENAI_ENDPOINT"),
+        ("foundry-identity", "MODEL_NAME"),
     ],
 )
 def test_incomplete_foundry_config_never_falls_back_to_copilot(
@@ -259,3 +286,141 @@ def test_incomplete_foundry_config_never_falls_back_to_copilot(
     with pytest.raises(ValueError, match=f"{provider} requires"):
         asyncio.run(harness.ask("Show my budget"))
     assert runtime["clients"] == []
+
+
+@pytest.mark.parametrize(
+    "endpoint,expected",
+    [
+        (
+            "https://resource.openai.azure.com",
+            "https://resource.openai.azure.com/openai/v1",
+        ),
+        (
+            "https://resource.openai.azure.com/",
+            "https://resource.openai.azure.com/openai/v1",
+        ),
+        (
+            "https://resource.openai.azure.com/openai/v1",
+            "https://resource.openai.azure.com/openai/v1",
+        ),
+        (
+            "https://resource.openai.azure.com/openai/v1/",
+            "https://resource.openai.azure.com/openai/v1",
+        ),
+        (
+            "https://resource.services.ai.azure.com/api/projects/lab/",
+            "https://resource.services.ai.azure.com/api/projects/lab/openai/v1",
+        ),
+        (
+            "https://resource.services.ai.azure.com/api/projects/lab/openai/v1/",
+            "https://resource.services.ai.azure.com/api/projects/lab/openai/v1",
+        ),
+    ],
+)
+def test_foundry_base_url_adds_v1_once(endpoint, expected) -> None:
+    assert _openai_base_url(endpoint) == expected
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "",
+        "not-a-url",
+        "http://example.test",
+        "https://",
+        "https://user:secret@example.test",
+        "https://example.test?api-key=secret",
+        "https://example.test/#fragment",
+        "https://example.test/openai/v1/responses",
+        "https://example.test/openai/deployments/model",
+        "https://example.test/api/projects/lab/agents/finops/endpoint",
+    ],
+)
+def test_foundry_endpoint_rejects_non_base_urls(endpoint) -> None:
+    with pytest.raises(ValueError, match="AZURE_OPENAI_ENDPOINT"):
+        _openai_base_url(endpoint)
+
+
+def test_copilot_model_configuration_is_not_renamed(monkeypatch) -> None:
+    _configure_foundry(monkeypatch, "foundry-key")
+    monkeypatch.setenv("FINOPS_MODEL_PROVIDER", "copilot")
+    provider, model = CopilotFinOpsHarness._model_configuration(AsyncExitStack())
+    assert provider is None
+    assert model == "separate-github-model"
+
+
+def test_legacy_key_configuration_is_compatible_and_warns(monkeypatch, caplog) -> None:
+    monkeypatch.setenv("FINOPS_MODEL_PROVIDER", "foundry-key")
+    monkeypatch.setenv("FOUNDRY_MODEL_URL", "https://legacy.example.test/openai/v1/")
+    monkeypatch.setenv("FOUNDRY_API_KEY", "synthetic-legacy-key")
+    monkeypatch.setenv("COPILOT_MODEL", "legacy-deployment")
+    provider, model = CopilotFinOpsHarness._model_configuration(AsyncExitStack())
+    assert provider["base_url"] == "https://legacy.example.test/openai/v1"
+    assert provider["api_key"] == "synthetic-legacy-key"
+    assert model == "legacy-deployment"
+    assert "deprecated" in caplog.text
+    assert "synthetic-legacy-key" not in caplog.text
+
+
+def test_new_foundry_key_names_take_precedence(monkeypatch) -> None:
+    _configure_foundry(monkeypatch, "foundry-key")
+    monkeypatch.setenv("FOUNDRY_MODEL_URL", "https://legacy.example.test/openai/v1/")
+    monkeypatch.setenv("FOUNDRY_API_KEY", "synthetic-legacy-key")
+    provider, model = CopilotFinOpsHarness._model_configuration(AsyncExitStack())
+    assert provider["base_url"] == "https://model.example.test/openai/v1"
+    assert provider["api_key"] == "synthetic-foundry-key"
+    assert model == "workshop-key-deployment"
+
+
+def test_partial_new_configuration_does_not_mix_legacy_secrets(monkeypatch) -> None:
+    _configure_foundry(monkeypatch, "foundry-key")
+    monkeypatch.delenv("AZURE_OPENAI_API_KEY")
+    monkeypatch.setenv("FOUNDRY_API_KEY", "synthetic-legacy-key")
+    monkeypatch.setenv("FOUNDRY_MODEL_URL", "https://legacy.example.test/openai/v1/")
+    with pytest.raises(ValueError, match="AZURE_OPENAI_API_KEY"):
+        CopilotFinOpsHarness._model_configuration(AsyncExitStack())
+
+
+@pytest.mark.parametrize(
+    "model_variable", ["MODEL_NAME", "AZURE_AI_MODEL_DEPLOYMENT_NAME"]
+)
+def test_identity_keeps_platform_injected_project_compatibility(
+    monkeypatch, model_variable
+) -> None:
+    import azure.identity.aio as azure_identity
+
+    monkeypatch.setenv("FINOPS_MODEL_PROVIDER", "foundry-identity")
+    monkeypatch.setenv(
+        "FOUNDRY_PROJECT_ENDPOINT", "https://project.example.test/api/projects/lab"
+    )
+    monkeypatch.setenv(model_variable, "hosted-deployment")
+    state = {"closed": False}
+
+    class Credential:
+        async def close(self):
+            state["closed"] = True
+
+    monkeypatch.setattr(azure_identity, "DefaultAzureCredential", Credential)
+
+    async def run():
+        async with AsyncExitStack() as stack:
+            provider, model = CopilotFinOpsHarness._model_configuration(stack)
+            assert model == "hosted-deployment"
+            assert provider["base_url"].endswith("/api/projects/lab/openai/v1")
+            assert "api_key" not in provider
+
+    asyncio.run(run())
+    assert state["closed"] is True
+
+
+def test_env_examples_and_hosted_binding_use_new_foundry_names() -> None:
+    root = Path(__file__).parents[2]
+    for project in ("starter", "solution"):
+        example = (root / project / ".env.example").read_text(encoding="utf-8")
+        for name in ("AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "MODEL_NAME"):
+            assert f"\n{name}=" in example
+        assert "\nFOUNDRY_MODEL_URL=" not in example
+        assert "\nFOUNDRY_API_KEY=" not in example
+        assert "\nCOPILOT_MODEL=gpt-5" in example
+        config = (root / project / "azure.yaml").read_text(encoding="utf-8")
+        assert "MODEL_NAME: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}" in config

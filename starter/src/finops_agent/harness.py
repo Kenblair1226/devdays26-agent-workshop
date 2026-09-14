@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 from tempfile import TemporaryDirectory
 from typing import Self
+from urllib.parse import urlsplit
 
 from copilot import CopilotClient
 from copilot.rpc import PermissionDecisionApproveOnce, PermissionDecisionReject
@@ -23,6 +25,8 @@ from copilot.tools import Tool
 from .instructions import FINOPS_AGENT_INSTRUCTIONS
 from .sdk_tools import build_sdk_tools
 from .tools import FinOpsToolbox
+
+logger = logging.getLogger(__name__)
 
 
 class CopilotFinOpsHarness:
@@ -169,27 +173,44 @@ class CopilotFinOpsHarness:
         if provider == "copilot":
             return None, os.getenv("COPILOT_MODEL", "gpt-5")
         if provider == "foundry-key":
-            url = os.getenv("FOUNDRY_MODEL_URL")
-            key = os.getenv("FOUNDRY_API_KEY")
-            model = os.getenv("COPILOT_MODEL")
+            names = ("AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "MODEL_NAME")
+            url, key, model = (os.getenv(name) for name in names)
+            if not any((url, key, model)):
+                url = os.getenv("FOUNDRY_MODEL_URL")
+                key = os.getenv("FOUNDRY_API_KEY")
+                model = os.getenv("COPILOT_MODEL")
+                if url and key and model:
+                    logger.warning(
+                        "Legacy Foundry key settings are deprecated; use "
+                        "AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY and MODEL_NAME."
+                    )
             if not url or not key or not model:
                 raise ValueError(
-                    "foundry-key requires FOUNDRY_MODEL_URL, FOUNDRY_API_KEY, "
-                    "and COPILOT_MODEL (deployment name)"
+                    "foundry-key requires AZURE_OPENAI_ENDPOINT, "
+                    "AZURE_OPENAI_API_KEY and MODEL_NAME (deployment name)"
                 )
             return {
                 "type": "openai",
-                "base_url": url,
+                "base_url": _openai_base_url(url),
                 "api_key": key,
                 "wire_api": "responses",
             }, model
         if provider == "foundry-identity":
-            endpoint = os.getenv("FOUNDRY_PROJECT_ENDPOINT")
-            model = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME")
+            endpoint = os.getenv("AZURE_OPENAI_ENDPOINT") or os.getenv(
+                "FOUNDRY_PROJECT_ENDPOINT"
+            )
+            model = os.getenv("MODEL_NAME") or os.getenv(
+                "AZURE_AI_MODEL_DEPLOYMENT_NAME"
+            )
             if not endpoint or not model:
                 raise ValueError(
-                    "foundry-identity requires FOUNDRY_PROJECT_ENDPOINT and "
-                    "AZURE_AI_MODEL_DEPLOYMENT_NAME"
+                    "foundry-identity requires AZURE_OPENAI_ENDPOINT and MODEL_NAME "
+                    "(or the platform-injected Foundry project/deployment settings)"
+                )
+            base_url = _openai_base_url(endpoint)
+            if not os.getenv("MODEL_NAME"):
+                logger.warning(
+                    "Using the legacy model deployment variable; prefer MODEL_NAME."
                 )
             from azure.identity.aio import DefaultAzureCredential
 
@@ -202,13 +223,44 @@ class CopilotFinOpsHarness:
 
             return {
                 "type": "openai",
-                "base_url": endpoint.rstrip("/") + "/openai/v1",
+                "base_url": base_url,
                 "wire_api": "responses",
                 "bearer_token_provider": token_provider,
             }, model
         raise ValueError(
             "FINOPS_MODEL_PROVIDER must be copilot, foundry-key, or foundry-identity"
         )
+
+
+def _openai_base_url(endpoint: str) -> str:
+    """Accept a resource/project root or its complete OpenAI v1 base URL."""
+    endpoint = endpoint.strip().rstrip("/")
+    parsed = urlsplit(endpoint)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError(
+            "AZURE_OPENAI_ENDPOINT must be an HTTPS base URL without credentials, "
+            "query parameters or fragments"
+        )
+    suffix = "/openai/v1"
+    root_path = parsed.path.removesuffix(suffix)
+    is_project = (
+        root_path.startswith("/api/projects/")
+        and len(root_path.split("/")) == 4
+        and bool(root_path.split("/")[-1])
+    )
+    if root_path and not is_project:
+        raise ValueError(
+            "AZURE_OPENAI_ENDPOINT must be a resource/project root or an "
+            "/openai/v1 base URL, not a completions, responses or agent URL"
+        )
+    return endpoint if parsed.path.endswith(suffix) else endpoint + suffix
 
 
 def _runtime_environment() -> dict[str, str]:
