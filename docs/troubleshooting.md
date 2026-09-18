@@ -9,9 +9,19 @@
 | PowerShell 找不到 `Activate.ps1` | 先確認 Python 為 3.13，再執行 `python -m venv .\starter\.venv`；Windows 使用 `Scripts\Activate.ps1`，不是 bash 的 `bin/activate` |
 | Lab 1 imports Copilot/Azure 失敗 | 確認執行目前版本的 `local_cli.py`；deterministic tools 不需先載入 SDK |
 | Lab 1 的 `NotImplementedError` | 你可能使用舊版 starter；新版工具已全部提供，不應要求補 aggregation |
-| `brief` 出現 `FileExistsError` | 保留既有輸出，改用 `--output workshop-output/lab1-evidence-v2.json` |
+| `brief` 出現 `FileExistsError` | 保留既有輸出，改用 `--output workshop-output/lab1-evidence-v2.json`；Chat 附件與 dashboard 選檔也要使用新檔 |
 | `brief is mock-only` | 設定 `FINOPS_BACKEND=mock`；分析包不能從 real backend 匯出 |
+| Evidence 缺 `daily_usage`／仍是舊日期 | 使用更新的課程版本重新執行 `python -m finops_agent brief --output workshop-output/lab1-evidence-v2.json`；確認 `schema_version=2`、快照 `2026-09-22T23:59:59Z`，若新名字也已存在，再換另一個名字 |
 | Copilot Chat 說無法看到分析包 | 在 VS Code Chat 附上生成的 JSON，不是只貼路徑；不要附 `.env` |
+| 今天還沒到 9/22，JSON 已有後續日期 | 正常，2026-09-01～2026-09-22 是預先模擬的合成資料，不是預測或真實帳戶的未來觀測 |
+| 選做 dashboard 一打開沒有圖 | 未選檔前應顯示空白狀態說明；用頁面 File API 選檔鈕載入新版 mock evidence，不靠自動讀相對路徑 |
+| 選做 dashboard 報 `file://`／CORS 錯誤 | 請 Copilot 移除 `fetch`／外連，改用 File API；不新增 server、npm、CDN 或 API key |
+| Dashboard 讀損壞 JSON、缺欄位或加總不一致卻顯示零 | 應清除舊結果並明確顯示錯誤，不能捏造零；舊 schema 缺 `daily_usage` 請重新產生新檔 |
+| Dashboard 趨勢不到 22 天／沒有到 9/22 | 先確認載入正確的新版 evidence；按 `daily_usage.items` 與 `missing_dates` 核對，有缺日須標未知並斷線，不能補零或插值 |
+| Dashboard 選部門後每日曲線跟著改 | 日彙總沒有部門／模型維度；移除臆造的 cross-filter，排行排序與 credits／USD 切換不應改全體 4760／44.88 |
+| Dashboard 將 org budget 已用改成 44.88 | Budget 必須讀自己的 snapshot：org 已用 45.20／剩餘 34.80，carol 已用 14／限額 20／剩餘 6；run-rate USD 61.20 與情境餘額 35.12 另列 |
+| Copilot Agent 提議安裝依賴、修改 source 或 `.env` | 拒絕越界操作；只允許 `workshop-output/finops-dashboard.html`（已有則新檔名），`starter/src/finops_agent/demo.html` 只作唯讀樣式參考，不複製 admin／API |
+| Dashboard 把 JSON 文字當成 HTML／出現執行行為 | 請改成 `textContent`，不用 `innerHTML`；先檢視生成檔再手動開啟，不自動執行或上傳 |
 | Chat 建議立刻回收 judy | 指出 activity=null 是未知；要求與 billing evidence 交叉比對、改成待確認事項 |
 | Chat 把兩個方案合計成「月節省」 | 重申 A 是同一 snapshot 期間、B 是下月假設；時間與成本口徑不同不得加總 |
 | Lab 2 的 `NotImplementedError` | 只補 `demo_connection.py` 的 factory；tools、instructions 與 UI 都已提供 |
@@ -59,8 +69,10 @@ python .\scripts\checkpoint.py --lab 2
 python -m pytest .\starter\checks -q
 ```
 
-bash 將 `\` 改為 `/`。Lab 1 免寫程式，不需 restore；Lab 2 編輯先備份至 `.workshop-backups/`，不刪 source、`.env` 或 Lab 1 的決策摘要。Lab 2 check 仍需完成 SDK 接線。
+bash 將 `\` 改為 `/`。Recovery 的目標是 Lab 2 接線：編輯先備份至 `.workshop-backups/`，不刪 source、`.env` 或 `workshop-output/` 的 evidence、決策摘要與選做 dashboard。Lab 2 check 仍需完成 SDK 接線。Lab 1 分析或圖表卡住時先核對 evidence；可以跳過 dashboard，Checkpoint 1 仍以決策摘要為準。
 
 ## 無認證／無 Azure 時
 
 可執行現成 tools 與 demo 的直接申請／admin 核准；Lab 1 Copilot Chat 需 GitHub 登入，Lab 2 SDK 聊天需授權或 BYOK。由已登入的同學或講師示範時不要交換秘密。沒有活動 Foundry 環境就觀摩 Lab 3，不把本機 fake-model 彩排或 HTTP readiness 宣稱為雲端部署成功。
+
+選做 dashboard 的 Agent 建檔沿用既有 Copilot 登入；已產生且檢視過的自含 HTML 可以在瀏覽器離線選取 mock JSON，沒有 server 或模型憑證。Agent 不可用就保留決策摘要、先進 Lab 2，不為了選做環節新增依賴或服務。

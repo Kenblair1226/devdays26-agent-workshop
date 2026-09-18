@@ -248,8 +248,8 @@ def test_user_metrics_keep_null_activity_and_separate_28_day_period() -> None:
     client = MockGitHubFinOpsClient()
     metric = next(row for row in client.get_user_metrics() if row.user == "judy")
     assert metric.last_activity_at is None
-    assert metric.period.start == date(2026, 8, 7)
-    assert metric.period.end == date(2026, 9, 3)
+    assert metric.period.start == date(2026, 8, 26)
+    assert metric.period.end == date(2026, 9, 22)
     assert "synthetic" in metric.source
     assert client.user_metrics_metadata["status"] == "available"
 
@@ -288,8 +288,19 @@ def test_coverage_and_source_metadata_are_defensive_copies() -> None:
     client = MockGitHubFinOpsClient()
     client.coverage["start"] = "1900-01-01"
     client.usage_metadata["limitations"].clear()
-    assert client.coverage["start"] == "2026-08-07"
+    assert client.coverage["start"] == "2026-08-26"
     assert client.usage_metadata["limitations"]
+
+
+def test_legacy_fixture_coverage_follows_its_snapshot(mutate_snapshot) -> None:
+    mutate_snapshot("ai-credit-usage.json", lambda data: data.pop("coverage"))
+    client = MockGitHubFinOpsClient()
+    assert client.coverage == {
+        "start": "2026-08-26",
+        "end": "2026-09-22",
+        "kind": "sparse_training_samples",
+    }
+    assert FinOpsToolbox(client).get_cost_summary()["net_quantity"] == 4760
 
 
 def test_budget_remaining_uses_budget_specific_consumption_and_scope() -> None:

@@ -4,7 +4,7 @@
 
 | Lab | Hands-on | 執行位置 |
 | --- | --- | --- |
-| 1 | 用現成工具 + Copilot Chat 調查成本、seats、budgets，交付決策摘要 | 本機 mock 資料；Chat 需 GitHub 登入，免寫程式 |
+| 1 | 用現成工具 + Copilot Chat 調查成本、seats、budgets，交付決策摘要；選做網頁 dashboard | 本機 mock 資料；Copilot Chat 使用既有 GitHub 登入 |
 | 2 | 一次 harness 接線：查費用／節省建議 → 申請提高限額 → 管理者 approve | 本機使用者／管理者頁面，Copilot 或 BYOK model |
 | 3 | 同一個 harness 換成 Foundry Model，再選配 direct-code deploy | 預建模型；依環境與學員進度選擇實作或講師 demo |
 
@@ -17,7 +17,7 @@
 - `solution/`：完整參考實作與 tests，和 starter 使用相同介面。
 - `data/`：合成、已正規化的教學報表；service folders 內附同樣資料供部署。
 - `scripts/checkpoint.py`：先備份學員編輯，再還原指定 checkpoint。
-- `workshop-output/`：Lab 1 的 evidence JSON 與 Copilot 決策摘要，由學員產生、不提交 Git。
+- `workshop-output/`：Lab 1 的 evidence JSON、決策摘要與選做的 `finops-dashboard.html`，由學員產生、不提交 Git，也不屬於 source checkpoint。
 
 完成課前安裝後，在 repository root：
 
@@ -29,9 +29,11 @@ python -m finops_agent brief --output .\workshop-output\lab1-evidence.json
 ```
 
 bash：`PYTHONPATH=starter/src FINOPS_BACKEND=mock python -m finops_agent cost`。
-基準答案為 MTD **4,760 net AI credits / USD 44.88**，部門第一名是 **AI Lab，2,400 credits**。把生成的 evidence JSON 附到 VS Code Copilot Chat，用 Lab 1 的調查 prompts 分析；不必先實作 aggregation 或 SDK。
+基準答案為 MTD **4,760 net AI credits / USD 44.88**，部門第一名是 **AI Lab，2,400 credits / USD 26**。快照固定在 **`2026-09-22T23:59:59Z`**，MTD 是 **2026-09-01～2026-09-22**，不是今天。這次將合成月累計重新模擬為有高低變化的 22 天樣本，總數保留；若在 9/22 前查看，後續日期也是預先模擬的教學資料，不是預測或真實帳單。
 
-Lab 1 聚焦成本總覽、seat review、部門歸屬、預算與 what-if。課程使用現成工具與合成資料，不需要額外安裝分析平台、設定 SSO 或同步真實組織資料。
+把生成的 evidence JSON 附到 VS Code Copilot Chat 的 **Ask** 模式，用 Lab 1 的調查 prompts 找出有依據的行動。新版 `schema_version=2` 加入 `daily_usage`，每日 credits／USD 分別加總回上述 MTD；缺日不能補成零，完整口徑見 [資料說明](data/README.md)。`brief` 不會覆蓋舊檔；已有輸出時可改用 `--output workshop-output/lab1-evidence-v2.json`，並把新檔附到 Chat。
+
+Lab 1 聚焦成本總覽、seat review、部門歸屬、預算與 what-if。完成決策摘要後，可依 [學員手冊的選做流程](docs/student-lab.md) 改用 Copilot **Agent** 模式，檢視它提議的 edits，僅建立 `workshop-output/finops-dashboard.html`。網頁用 File API 選取同一份新版 mock evidence；不用安裝套件、CDN、API key 或 server，也不讀真實組織資料。不修改 repo source／`.env`，不自動執行或上傳生成結果；dashboard 是 Lab 1 延伸，不增加 Lab 或核心 checkpoint。
 
 Lab 2 接線後執行 `python -m finops_agent demo`，開啟終端提供的 User / Admin 兩個連結。User 扮演 carol：已用 USD 14、限額 20、剩餘 6；要求提高至 30 後先維持 pending，管理者確認後變成 **限額 30、剩餘 16**。不需複製 plan ID、token 或輸入 JSON。
 

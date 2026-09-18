@@ -15,12 +15,12 @@ def test_month_to_date_cost_summary() -> None:
     assert result["period"]["label"] == "month_to_date"
     assert result["net_quantity"] == 4760
     assert result["net_amount"] == 44.88
-    assert result["as_of"] == "2026-09-03T23:59:59Z"
+    assert result["as_of"] == "2026-09-22T23:59:59Z"
     assert result["unit"] == "AI credits"
     assert "not raw model tokens" in result["quantity_note"]
     assert result["coverage"] == {
-        "start": "2026-08-07",
-        "end": "2026-09-03",
+        "start": "2026-08-26",
+        "end": "2026-09-22",
         "kind": "sparse_training_samples",
     }
     assert result["granularity"] == "daily_samples"
@@ -53,8 +53,8 @@ def test_model_breakdown_and_forecast() -> None:
     forecast = tools.forecast_budget(80)
 
     assert breakdown["items"][0]["model"] == "gpt-5.4"
-    assert forecast["projected_month_end_amount"] == 448.8
-    assert forecast["projected_over_budget"] is True
+    assert forecast["projected_month_end_amount"] == 61.2
+    assert forecast["projected_over_budget"] is False
     assert forecast["scenario_only"] is True
     assert "run-rate" in forecast["method"]
     assert "not an actual budget balance or final invoice" in forecast["forecast_note"]
@@ -69,7 +69,7 @@ def test_recommendations_are_evidence_backed() -> None:
     by_category = {item["category"]: item for item in result["recommendations"]}
     seats = by_category["seat_utilization"]
     assert seats["evidence"]["users"] == ["ivan"]
-    assert seats["evidence"]["as_of"] == "2026-09-03T23:59:59Z"
+    assert seats["evidence"]["as_of"] == "2026-09-22T23:59:59Z"
     assert "unquantified" in seats["estimated_impact"]
     assert "19" not in seats["estimated_impact"]
     assert any("missing telemetry" in note for note in result["caveats"])
@@ -78,8 +78,8 @@ def test_recommendations_are_evidence_backed() -> None:
     for user in prompts["evidence"]["users"]:
         assert user["period"] == {
             "label": "last_28_days",
-            "start": "2026-08-07",
-            "end": "2026-09-03",
+            "start": "2026-08-26",
+            "end": "2026-09-22",
         }
         assert "synthetic users-28-day" in user["source"]
     assert "does not show" in by_category["model_routing"]["recommendation"]
@@ -88,10 +88,10 @@ def test_recommendations_are_evidence_backed() -> None:
 @pytest.mark.parametrize(
     ("period", "start", "end", "quantity", "amount"),
     [
-        ("today", None, None, 1390, 14.34),
+        ("today", None, None, 275, 2.53),
         ("last_28_days", None, None, 5060, 47.88),
         ("custom", "2026-08-31", "2026-08-31", 300, 3),
-        ("custom", "2026-09-01", "2026-09-01", 2240, 20.72),
+        ("custom", "2026-09-01", "2026-09-01", 320, 3.02),
     ],
 )
 def test_supported_sample_periods(period, start, end, quantity, amount) -> None:
@@ -108,9 +108,9 @@ def test_supported_sample_periods(period, start, end, quantity, amount) -> None:
     ("period", "start", "end"),
     [
         ("previous_month", None, None),
-        ("custom", "2026-08-06", "2026-09-01"),
-        ("custom", "2026-09-01", "2026-09-04"),
-        ("custom", "2026-08-08", "2026-08-10"),
+        ("custom", "2026-08-25", "2026-09-01"),
+        ("custom", "2026-09-01", "2026-09-23"),
+        ("custom", "2026-08-26", "2026-08-30"),
     ],
 )
 def test_missing_coverage_is_unavailable_not_zero(period, start, end) -> None:
@@ -178,7 +178,7 @@ def test_forecast_rejects_non_finite_or_invalid_budget(amount) -> None:
         ("today", None, None),
         ("last_28_days", None, None),
         ("custom", "2026-09-01", "2026-09-02"),
-        ("custom", "2026-08-31", "2026-09-03"),
+        ("custom", "2026-08-31", "2026-09-22"),
     ],
 )
 def test_forecast_requires_month_start_to_snapshot_date(period, start, end) -> None:
@@ -187,8 +187,8 @@ def test_forecast_requires_month_start_to_snapshot_date(period, start, end) -> N
 
 
 def test_forecast_accepts_an_equivalent_fixed_mtd_window() -> None:
-    result = toolbox().forecast_budget(80, "custom", "2026-09-01", "2026-09-03")
-    assert result["projected_month_end_amount"] == 448.8
+    result = toolbox().forecast_budget(80, "custom", "2026-09-01", "2026-09-22")
+    assert result["projected_month_end_amount"] == 61.2
 
 
 def test_empty_loaded_report_is_not_zero(monkeypatch) -> None:
@@ -200,7 +200,7 @@ def test_empty_loaded_report_is_not_zero(monkeypatch) -> None:
 
 def test_seat_inactivity_uses_seat_snapshot_not_wall_clock() -> None:
     client = MockGitHubFinOpsClient()
-    client._seat_as_of = "2026-08-14T23:59:59Z"
+    client._seat_as_of = "2026-09-02T23:59:59Z"
     result = FinOpsToolbox(client).recommend_optimizations()
     assert "seat_utilization" not in {
         rec["category"] for rec in result["recommendations"]

@@ -2,7 +2,7 @@
 
 這次我們一起做 **3 個 Labs**：先用 GitHub Copilot Chat 看懂費用資料，再接上 Copilot SDK，試試「使用者申請額度、管理者核准」，最後把同一個 harness 的模型換成 Foundry Model；完成模型切換且環境就緒後，再選配把 Agent 部署到 Foundry。
 
-不用擔心要從零開始寫程式：**Lab 1 的工具都準備好了；Lab 2 只補幾行 SDK 接線**。需要參考時，可以看 `solution/` 裡的完整版本。
+**Lab 1 用現成工具找證據、提出決策；Lab 2 接上 SDK，讓查詢與申請流程串起來**。想把調查結果做得更好讀，也可以在 Lab 1 選做網頁 dashboard。需要參考時，可以看 `solution/` 裡的完整版本。
 
 ## 今天要解決什麼問題？
 
@@ -64,15 +64,15 @@ python -m finops_agent --data-dir data cost
 
 看到 `net_quantity=4760`、`net_amount=44.88`、`currency=USD`，就表示資料讀進來了。
 
-我們用的是 **2026-09-03 UTC** 的範例快照，所以這裡的 `month_to_date` 指 9 月 1–3 日，不是你上課當天。這些都是**合成教學數字**，別把它當成正式 GitHub 價格、帳單或原始 token 數。
+我們用的是 **`2026-09-22T23:59:59Z`** 的範例快照，所以這裡的 `month_to_date` 固定指 **2026-09-01～2026-09-22（含首尾，共 22 天）**，不是你上課當天。這些都是**合成教學數字**：即使你在 9/22 之前打開，也會看到預先模擬的後續日期；那不是未來的真實觀測，也不是預測或正式 GitHub 帳單。AI credits 更不是原始 token 數。
 
-## Lab 1：用 GitHub Copilot 做 FinOps 調查（免寫程式）
+## Lab 1：用 GitHub Copilot 做 FinOps 調查
 
-這一段先不寫程式。我們直接拿準備好的工具和資料，請 Copilot 幫忙回答三件事：**錢花在哪裡、預算合不合理、接下來該做什麼**。全程使用 mock 資料，不需要真實 organization 的權限。
+先從主管的問題出發，拿工具產生的證據，請 Copilot 幫忙回答三件事：**錢花在哪裡、預算合不合理、接下來該做什麼**。全程使用 mock 資料，不需要真實 organization 的權限。
 
 ### 1. 先準備要交給 Copilot 的資料
 
-工具已經寫好了，不用改 `analytics.py`。確認 `FINOPS_BACKEND=mock`，跑下面兩個命令，產生分析用的 JSON 並檢查工具是否正常：
+確認 `FINOPS_BACKEND=mock`，用現成工具產生分析用的 JSON，再檢查工具與資料是否正常：
 
 ```powershell
 python -m finops_agent brief --output .\workshop-output\lab1-evidence.json
@@ -86,19 +86,22 @@ python -m finops_agent brief --output workshop-output/lab1-evidence.json
 python -m pytest starter/checks/test_lab1.py -q
 ```
 
-這個 checkpoint **不需要改程式就應該通過**。它只能告訴你工具和資料沒問題，Copilot 等一下的回答還是要自己核對。
+這個工具檢查在課程提供的 starter 應該通過。它只能告訴你工具和資料沒問題，Copilot 等一下的回答還是要自己核對。
 
-如果檔案已經存在，換個名字，例如 `lab1-evidence-v2.json`，再跑一次；工具不會覆蓋舊檔。`brief` 只是把 mock 資料整理起來，不會呼叫模型、建立變更計畫或修改 seats。
+如果檔案已經存在，換個名字，例如 `python -m finops_agent brief --output workshop-output/lab1-evidence-v2.json`，再跑一次；工具不會覆蓋舊檔。新版分析包的 `schema_version=2`，包含 `daily_usage`。若手上的舊輸出缺少它，請重新產生，接下來的附件與選檔也要改用**新檔名**。`brief` 只是把 mock 資料整理起來，不會呼叫模型、建立變更計畫或修改 seats。
 
 打開 JSON，可以先認識這幾個 section，不用逐行讀完：
 
 | Section | 可以拿來看什麼 |
 | --- | --- |
 | `cost_summary`、`department_ranking` | 總用量、部門排行、Unallocated |
+| `daily_usage` | 9/1～9/22 每日樣本、各日 net credits／USD，以及 coverage 與缺漏限制 |
 | `model_breakdown`、`user_breakdown`、`leading_department_models` | 找出用量集中在哪些人／模型，深入第一名部門 |
 | `seat_inventory`、`optimization_hypotheses` | 閒置疑點、未知 activity、改善假設 |
 | `budget_review` | 各 budget 自己的 consumed、remaining、scope 與 hard stop |
 | `run_rate_scenario` | 給定 USD 80 情境的月末外推；不是實際預算餘額 |
+
+這次把原本的合成月累計重新分配成有高低變化的每日樣本，保留 **4,760 net AI credits / USD 44.88**，不是往真實帳單追加觀測。Billing 宣告的訓練視窗是 **2026-08-26～2026-09-22**，類型為 `sparse_training_samples`；8 月只提供 8/31 的樣本，未提供的日期不是已知的零。9 月雖然每天都有樣本，也不能據此宣稱拿到了真實組織的完整帳務。詳細口徑見 [資料說明](../data/README.md)。
 
 ### 2. 請 Copilot 找出成本熱點
 
@@ -153,6 +156,77 @@ python -m pytest starter/checks/test_lab1.py -q
 自己讀一遍、修正不合理的地方，再存成 `workshop-output/finops-review.md`。這份就是你這一段的成果；目錄已被 Git 忽略，不會自動進入版本控制。
 
 **Checkpoint 1：做到這裡就算完成。** 你能說明「錢花在哪裡、接下來想做什麼、哪些事還不能決定」，並拿出一次跨表比對、兩個有來源的行動，以及一個先不做的理由。答案不用和別人一模一樣，重點是你能講清楚依據；測試通過不能取代這份摘要。
+
+### 選做（optional）：請 Copilot 幫你把用量做成網頁 dashboard
+
+想讓主管更容易看懂趨勢嗎？可以把**同一份 mock evidence** 做成一頁本機 dashboard。這是 Lab 1 的延伸，不是第四個 Lab、新服務或繳交要求；**Checkpoint 1 仍然是一頁決策摘要**，跳過這段也能直接進 Lab 2。
+
+剛才用 **Ask** 模式分析附件，現在改用 VS Code 的 **GitHub Copilot Chat → Agent** 模式，讓 Copilot 提議建立檔案。沿用 VS Code 既有的 Copilot 登入即可；**不要把 API key、token、`.env` 或真實組織資料放進 prompt 或瀏覽器**。產生後的網頁本身不需要模型認證。
+
+#### 先限定它能讀什麼、改哪裡
+
+1. 附上剛產生、含 `daily_usage` 的 `workshop-output/lab1-evidence.json`。若你用了 `lab1-evidence-v2.json`，把下面 prompt 的資料檔名一起換掉。
+2. 只允許建立 `workshop-output/finops-dashboard.html`。若已有作品，先選新名字，例如 `finops-dashboard-v2.html`，並更新 prompt；不要覆蓋舊成果。
+3. 可讓 Copilot **唯讀**參考 `starter/src/finops_agent/demo.html` 的樣式；不是拿它當資料來源，也不是複製管理者功能。
+4. 檢視 Copilot 提議的 edits 與工具操作，再接受變更。若提議改 repo source、`.env`、安裝套件或開 server，先拒絕，請它回到單一 HTML 的範圍。先看過檔案，再由你手動開啟；不要自動執行或上傳生成結果。
+
+把這段貼給 Copilot：
+
+```text
+請幫我把 Lab 1 的合成用量資料做成一頁繁體中文 FinOps dashboard。
+
+範圍：
+- 唯一資料來源是附件 workshop-output/lab1-evidence.json；請先讀懂實際 JSON 欄位，不猜 schema，不把下列驗收數字硬編成畫面資料。
+- 唯一可建立／編輯的檔案是 workshop-output/finops-dashboard.html；已存在就先停止，讓我指定新檔名。不要改 repo source、.env、資料集或其他檔案。
+- starter/src/finops_agent/demo.html 只可唯讀參考樣式：重用完整 Clawpilot --cp-* 變數、light/dark CSS 和 scoutTheme／prefers-color-scheme 的主題偵測機制，主題 script 放在其他 JS 前。所有元件色彩只用 var(--cp-*)；字體用 "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif，等寬字用 Consolas, "Courier New", Courier, monospace。採 4px 間距、一般元件 0.625rem 圓角、卡片 16px 與輕量陰影。不要複製它的 admin、API、輪詢或登入行為。
+- 交付單一自含 HTML/CSS/JavaScript；用 vanilla SVG/CSS 畫圖。不要 npm、框架安裝、CDN、外部字型、網路呼叫、fetch、SDK、API、backend、server、登入或任何 persistence（含 localStorage、cookie）。不要 seat／budget 變更按鈕或 approval tools。不要執行命令、自動開啟或上傳結果。
+
+資料載入與錯誤：
+- 頁面初始顯示空白狀態說明和有 label 的 JSON 選檔 input，先不要顯示數字或假圖。用瀏覽器 File API 讀取使用者選的檔案，再 JSON.parse；讓 file:// 直接開啟也能用，不靠 fetch 或 server。
+- 驗證 schema_version=2、必備 section／欄位／型別、有限數值、日期範圍與 as_of 一致性；daily_usage.items 日期須唯一且排序。資料缺漏、格式錯誤、舊版缺 daily_usage 或加總不一致時，清掉舊圖與數字，顯示可讀的錯誤和重新產生 evidence 的建議，不能補成零。
+- daily_usage.items 的 net_quantity 與 net_amount 必須分別加總核對 cost_summary；金額以 cents 檢核，避免浮點誤差。核對 items 與 missing_dates 是否符合 period，不自己補觀測。
+- 所有來自 JSON 的文字（含名稱、source、limitations、錯誤內容）都以 textContent 呈現，不使用 innerHTML 或當成程式執行。選檔、切換與排序支援鍵盤、可見焦點；錯誤用 role=alert。每張圖都附可閱讀的資料表和清楚的單位。
+
+畫面：
+1. 醒目標示「Synthetic data／合成教學資料」、snapshot、固定 MTD 起訖、currency=USD、unit=AI credits、source、coverage、limitations。日期可能是預先模擬的未來日期，不是預測、即時使用量、真實帳單或原始 tokens。
+2. cost_summary 提供 net AI credits 與 net USD 兩張 KPI；金額與 credits 永遠分開，不相加、不互換。
+3. 每日趨勢只讀 daily_usage.items，依 date 畫 net_amount 或 net_quantity，提供單位切換與同資料表。只畫提供的樣本；missing_dates 應標成未知並斷線，不補零或插值。顯示 daily_samples 與 sparse_training_samples 的限制。
+4. 部門排行讀 department_ranking.ranking，模型排行讀 model_breakdown.items；保留 Unallocated 與所有資料列，可依提供的 net credits／金額欄位排序。不要從日彙總臆造「依部門／模型篩選每日趨勢」；排序或單位切換不能改全體 KPI、期間或加總。
+5. 獨立 budget 表讀 budget_review.budgets，每筆沿用自己的 scope、限額、已用、剩餘與 hard-stop 欄位（欄名以附件為準，例如 consumed_amount）；不可用 billing 金額覆蓋 budget snapshot。獨立 seat 表讀 seat_inventory.seats，保留它自己的 activity 資訊，null 顯示未知，不能自動判成可回收。
+6. run_rate_scenario 另放情境區，按原始欄位呈現假設與限制，與 billing、budget、seat 表分開。外推不是已出帳金額、實際 budget 餘額或保證超支日。
+
+先說明你會讀哪些欄位、如何核對加總，再提出這一個 HTML 檔案的變更，讓我檢視。
+```
+
+#### 自己開啟、選檔，再對答案
+
+接受前，先看 diff：是否只有指定的 HTML？有沒有外連、讀取認證或帶入管理者功能？確認後，從檔案總管雙擊 `workshop-output/finops-dashboard.html`，或把這個檔案拖進瀏覽器。**不需要 `npm install`、啟動 server 或調整 CORS**。
+
+應先看到選檔說明。用頁面的選檔鈕載入**新版** evidence JSON，而不是期待網頁自己找相對路徑。檔案只留在此頁記憶體；重新整理後再選一次即可。
+
+| 要核對什麼 | 這份 mock evidence 的答案 |
+| --- | --- |
+| Snapshot／MTD | `2026-09-22T23:59:59Z`；2026-09-01～2026-09-22 |
+| 全體 KPI／每日樣本加總 | 4,760 net AI credits／USD 44.88 |
+| AI Lab／Unallocated | 2,400 credits／USD 26；90 credits／USD 0.54 |
+| 每日趨勢 | 22 個 9 月日期，最後是 9/22；`missing_dates=[]`，每天有樣本不代表真實帳務完整 |
+| Organization budget（獨立快照） | 限額 80、已用 45.20、剩餘 34.80；不是 billing 的 44.88 |
+| carol budget（尚未進 Lab 2 核准） | 限額 20、已用 14、剩餘 6 |
+| Run-rate 情境（不是實際預算） | 44.88 ÷ 22 × 30 = USD 61.20；`projected_over_budget=false`，情境目前餘額 35.12 不是 org 的 34.80 |
+
+切換 credits／USD、切換排行排序後，再核對一次全體總數。也檢查空白狀態與錯誤處理：若選到損壞 JSON 或缺 `daily_usage` 的舊 evidence，應顯示錯誤，而不是一張全零或沿用舊數字的圖。舊版請用新檔名重新產生，並在 Chat 與網頁都換成新檔。
+
+有差異時，可以接著貼這段；仍只允許改剛才指定的 HTML：
+
+```text
+請用我附的新版 mock evidence 檢查剛才的 dashboard，只修正指定 HTML，先列出差異的 JSON 欄位與原因，不修改或捏造資料，也不自動執行或上傳。
+這份資料應加總為 4760 credits／44.88 USD，AI Lab 2400／26，Unallocated 90／0.54；daily_usage 應有 22 個 9 月日期並在 2026-09-22 結束。
+確認 organization budget 仍是 consumed 45.20／remaining 34.80，carol 是 consumed 14／limit 20／remaining 6，沒有被 billing 或 forecast 覆蓋。
+確認排序／單位切換不改總數，也沒有臆造部門或模型的每日篩選。
+修正損壞 JSON、缺 daily_usage、缺欄位與不一致加總的錯誤提示；缺日期標未知並斷線，不補零。舊 evidence 必須提示用新檔名重新產生。
+```
+
+圖畫得漂亮只是第一步，**數字能對回證據、限制說得清楚**，才是這個選做練習的重點。如果 Agent 模式不可用，或頁面還需要調整，保留決策摘要、先進 Lab 2 就好。
 
 **接著進 Lab 2。** 剛才是你手動準備資料、附檔、追問。下一段把模型和工具接起來，讓 Agent 自己查資料，再試一次「提出申請 → 管理者核准」。
 
@@ -334,7 +408,7 @@ Monitor 預設只取近期 console logs，想持續看才加 `--follow`。這次
 
 ### 3. 換了什麼？哪些事情沒有變？
 
-能說出「換的是 model provider，SDK、mock 資料與人工核准流程不變」，就是這段的核心成果。也請分清楚 **本機 harness 呼叫 Foundry Model** 與 **Hosted Agent 部署完成**，兩件事要分開記錄。
+**Checkpoint 3：** 能說出「換的是 model provider，SDK、mock 資料與人工核准流程不變」，就是這段的核心成果。也請分清楚 **本機 harness 呼叫 Foundry Model** 與 **Hosted Agent 部署完成**，兩件事要分開記錄。
 
 你可以自行完成，或跟著講師看相同流程。如果只完成模型切換，就記錄模型呼叫成功、hosting 未執行；如果沒有雲端資源，就記為觀摩，不要把本機結果說成「已部署 Foundry」。
 
@@ -347,9 +421,9 @@ python .\scripts\checkpoint.py --lab 2
 python -m pytest .\starter\checks -q
 ```
 
-bash 用 `python scripts/checkpoint.py --lab 2`。它不會刪掉工作目錄，也不會覆蓋 `.env` 或 `workshop-output/finops-review.md`。
+bash 用 `python scripts/checkpoint.py --lab 2`。它不會刪掉工作目錄，也不會覆蓋 `.env` 或 `workshop-output/` 裡的 evidence、`finops-review.md` 與選做的 `finops-dashboard.html`。
 
-Lab 1 沒有 code TODO，不需要還原。如果卡在分析，先整理出一個有依據的行動和一個「暫時不做」的決定，和 TA 核對後再接著做。
+如果 Lab 1 卡在分析，先整理出一個有依據的行動和一個「暫時不做」的決定，和 TA 核對後再接著做。選做 dashboard 卡住也可以先保留檔案；這些是分析成果，不是 source checkpoint 的還原目標。
 
 ## 離開前，記得收尾
 

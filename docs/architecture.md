@@ -24,6 +24,16 @@ flowchart LR
 
 Lab 1 的現成 deterministic CLI 不載入 Copilot 或 Azure client；只需要 Python 與 fixture。`brief` 將既有報表工具輸出收集為 read-only JSON，學員再手動附到 VS Code Copilot Chat 分析。Lab 2 透過 `demo_connection.py` 將預建個人 tools 接到同一個 SDK harness。上圖的通用 CLI `ask` / `chat` 和 seat 操作是進階範例，不再是 Lab 2 必做。
 
+## Lab 1 選做 dashboard：本機檔案，不是新服務
+
+核心交付仍是 Copilot Chat **Ask** 分析後的一頁決策摘要。選做時才切到 VS Code **Agent** 模式，根據同一份 mock evidence 提議建立 `workshop-output/finops-dashboard.html`；學員檢視 edits 後接受，再手動開啟。這不經過 Lab 2 的 SDK harness，也不新增 Lab、source checkpoint 或管理服務。
+
+頁面只用瀏覽器 **File API** 讀使用者選取的 JSON，資料只留在頁面記憶體。單一 HTML/CSS/JS 可直接用 `file://` 開啟，沒有 `fetch`、外部網路呼叫、CDN、backend、登入或 persistence；建立檔案沿用 VS Code Copilot 登入，瀏覽器不持有 API key。Repo source 與 `.env` 不在可編輯範圍，結果不自動執行或上傳。
+
+`starter/src/finops_agent/demo.html` 僅供唯讀參考完整 Clawpilot `--cp-*` 變數、light/dark 機制與 Segoe UI 字體，不複製其 admin／API 行為。Dashboard 不提供 seat／budget 變更按鈕或 approval tools；JSON 字串以 `textContent` 呈現，不送進 `innerHTML`。空白狀態、schema／加總錯誤與未知日期都要明確顯示，圖表另附表格與鍵盤可用的控制項。
+
+新版 `brief` 為 `schema_version=2`，`daily_usage.items` 只有 `date`、`net_quantity`、`net_amount`，credits／USD 分別加總回 `cost_summary`。部門與模型排行來自 `department_ranking.ranking`、`model_breakdown.items`，保留 `Unallocated`；日彙總不含這些維度，不能做臆造的部門／模型每日 cross-filter。Budget、seat 與 run-rate scenario 分區呈現，不共享或互相覆蓋 consumed／remaining。
+
 ## Lab 2：個人 FinOps 與管理者核准
 
 ```mermaid
@@ -85,6 +95,7 @@ flowchart LR
 | --- | --- | --- |
 | Lab 2 使用者／管理者角色 | 本機啟動期不同 capabilities；核准需人點擊 | 正式 GitHub／Entra 登入或 real org 寫入權限 |
 | Lab 1 Copilot Chat 分析 | VS Code 的 GitHub Copilot 登入、只附合成資料 | SDK 已完成接線或 GitHub org API 權限 |
+| Lab 1 選做 dashboard | Copilot Agent 建檔需既有登入；開頁後 File API 選取 mock JSON | 網頁需要模型 key、可呼叫管理 API 或為新服務 |
 | 個人 Copilot model calling | `COPILOT_GITHUB_TOKEN` | GitHub organization billing 管理權限 |
 | BYOK model calling | API key 或 Managed Identity | Foundry hosting 已部署 |
 | Real organization billing read adapter | instructor CLI、最小權限 token | 允許寫入 |
@@ -102,6 +113,10 @@ Mock seats、budgets、plans、audit 都只存在目前程序。稽核事件記�
 ## 費用與證據口徑
 
 Synthetic files 是**內部 normalized schema**，不是可原封不動代入 GitHub API 的 response。Billing amount、net credits、原始 tokens 不能混為一談；fixture 單價為教學用，不是 GitHub 公告價格。
+
+快照固定為 `2026-09-22T23:59:59Z`，MTD 是 2026-09-01～2026-09-22。9 月 22 天的高低變化是重新模擬的教學樣本，總量維持 4,760 net AI credits／USD 44.88；在 9/22 前查看時，未來日期也是預先模擬，不是預測或真實觀測。Billing coverage 為 2026-08-26～2026-09-22、`sparse_training_samples`，8 月只有 8/31 樣本；缺日未知、不補零。9 月每天有樣本不保證真實組織帳務完整，趨勢應呈現樣本限制，`missing_dates` 有缺日就斷線。
+
+Organization budget 自己的已用／剩餘為 45.20／34.80；carol 為 14／6（限額 20）。不要以 billing 44.88 取代 budget snapshot。USD 80 run-rate 情境為 44.88 ÷ 22 × 30 = **USD 61.20**，`projected_over_budget=false`；其目前餘額 35.12 也不是組織實際剩餘 34.80。欄位契約與 seat 反例見 [資料說明](../data/README.md)。
 
 部門 mapping 是已解析的 cost-center/organizer 歸屬。Teams 可以重疊，不能直接當財務成本中心。無法歸屬的用量保留 `Unallocated`，含 real totals 與已知使用者報表之間的 residual。
 
@@ -122,4 +137,4 @@ Real billing endpoint 回傳的是報表，不是即時 meter；`retrieved_at` �
 
 ## 課程範圍
 
-Lab 1 以成本、seats、UBB budgets、部門歸屬與節省建議為分析情境。本課程使用 mock tools、人工核准流程、Foundry model provider 與選配 direct-code hosting；不加入 Toolbox、檢索、正式 SSO、跨組織同步或即時帳務資料。
+Lab 1 以成本、seats、UBB budgets、部門歸屬與節省建議為分析情境，可選做一個呈現相同 evidence 的本機 dashboard。本課程使用 mock tools、人工核准流程、Foundry model provider 與選配 direct-code hosting；不加入 Toolbox、檢索、正式 SSO、跨組織同步或即時帳務資料。

@@ -112,12 +112,13 @@ class MockGitHubFinOpsClient:
                 raise ValueError(f"{name} currency does not match usage")
         self._seat_as_of = _timestamp(seats.get("as_of"), "seats.as_of")
         self._budget_as_of = _timestamp(budgets.get("as_of"), "budgets.as_of")
+        metric_end = datetime.fromisoformat(self._as_of).date()
         self._coverage = deepcopy(
             usage.get(
                 "coverage",
                 {
-                    "start": "2026-08-07",
-                    "end": "2026-09-03",
+                    "start": (metric_end - timedelta(days=27)).isoformat(),
+                    "end": metric_end.isoformat(),
                     "kind": "sparse_training_samples",
                 },
             )
@@ -126,7 +127,6 @@ class MockGitHubFinOpsClient:
             UsageItem.from_dict(item)
             for item in _objects(usage.get("usage_items"), "usage_items")
         ]
-        metric_end = datetime.fromisoformat(self._as_of).date()
         self._metric_period = ReportingPeriod(
             metric_end - timedelta(days=27), metric_end, "last_28_days"
         )
@@ -194,6 +194,8 @@ class MockGitHubFinOpsClient:
             "limitations": [
                 "Intentionally sparse training data. Totals describe supplied samples, "
                 "not a complete organization; missing days are not observed zeros.",
+                "Snapshot dates belong to a pre-simulated teaching scenario, "
+                "not real usage observed today.",
                 "Department/cost_center pairs are resolved organizer mappings, "
                 "not a live cost-center lookup.",
             ],

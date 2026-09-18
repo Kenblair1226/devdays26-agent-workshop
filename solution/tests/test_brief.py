@@ -1,6 +1,8 @@
 import json
 import subprocess
 import sys
+from datetime import date, timedelta
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -16,16 +18,70 @@ def test_brief_reuses_tool_evidence_without_mutations() -> None:
     seats_before = tools.list_seats()
     budgets_before = tools.list_budgets()
     result = build_analysis_brief(tools)
+    assert result["schema_version"] == 2
     assert result["backend"] == "mock"
     assert result["cost_summary"] == tools.get_cost_summary()
     assert result["department_ranking"]["unallocated_quantity"] == 90
     assert result["leading_department_models"]["department_filter"] == "AI Lab"
     assert result["run_rate_scenario"]["scenario_only"] is True
-    assert result["run_rate_scenario"]["projected_month_end_amount"] == 448.8
+    assert result["run_rate_scenario"]["projected_month_end_amount"] == 61.2
     assert result["seat_inventory"] == seats_before == tools.list_seats()
     assert result["budget_review"] == budgets_before == tools.list_budgets()
     assert tools.list_action_plans() == []
     assert tools.get_audit_log()["events"] == []
+
+
+def test_brief_daily_samples_reconcile_with_all_dashboard_totals() -> None:
+    tools = FinOpsToolbox(MockGitHubFinOpsClient())
+    result = build_analysis_brief(tools)
+    trend = result["daily_usage"]
+    summary = result["cost_summary"]
+    assert trend["period"] == {
+        "start": "2026-09-01",
+        "end": "2026-09-22",
+        "label": "month_to_date",
+    }
+    assert trend["as_of"] == summary["as_of"] == "2026-09-22T23:59:59Z"
+    assert trend["currency"] == "USD"
+    assert trend["unit"] == "AI credits"
+    assert trend["source"] == summary["source"]
+    assert trend["coverage"] == summary["coverage"]
+    assert trend["granularity"] == "daily_samples"
+    assert trend["missing_dates"] == []
+    assert [row["date"] for row in trend["items"]] == [
+        (date(2026, 9, 1) + timedelta(days=offset)).isoformat() for offset in range(22)
+    ]
+    assert len({row["net_amount"] for row in trend["items"]}) >= 10
+    for field in ("net_quantity", "net_amount"):
+        expected = Decimal(str(summary[field]))
+        for rows in (
+            trend["items"],
+            result["department_ranking"]["ranking"],
+            result["model_breakdown"]["items"],
+            result["user_breakdown"]["items"],
+        ):
+            assert sum(Decimal(str(row[field])) for row in rows) == expected
+    assert result["budget_review"]["budgets"][0]["consumed_amount"] == 45.2
+    assert result["run_rate_scenario"]["consumed_amount"] == 44.88
+
+
+def test_brief_trend_omits_and_labels_missing_days_instead_of_zero(monkeypatch) -> None:
+    client = MockGitHubFinOpsClient()
+    records = [
+        item for item in client.get_usage_items() if item.date != date(2026, 9, 10)
+    ]
+    monkeypatch.setattr(client, "get_usage_items", lambda: records)
+    result = build_analysis_brief(FinOpsToolbox(client))
+    trend = result["daily_usage"]
+    assert trend["missing_dates"] == ["2026-09-10"]
+    assert len(trend["items"]) == 21
+    assert "2026-09-10" not in {item["date"] for item in trend["items"]}
+    assert any(
+        "missing days are not observed zeros" in note for note in trend["limitations"]
+    )
+    assert sum(Decimal(str(row["net_amount"])) for row in trend["items"]) == (
+        Decimal(str(result["cost_summary"]["net_amount"]))
+    )
 
 
 def test_brief_rejects_real_backend_without_loading_any_data(monkeypatch) -> None:
@@ -64,7 +120,10 @@ def test_brief_cli_exports_usable_utf8_without_sdk_or_credentials(
     content = output.read_bytes()
     assert not content.startswith(b"\xef\xbb\xbf")
     brief = json.loads(content.decode("utf-8"))
+    assert brief["schema_version"] == 2
     assert brief["cost_summary"]["net_quantity"] == 4760
+    assert brief["daily_usage"]["items"][-1]["date"] == "2026-09-22"
+    assert len(brief["daily_usage"]["items"]) == 22
     assert brief["budget_review"]["budgets"][0]["remaining_amount"] == 34.8
     second = subprocess.run(
         command, cwd=root, env=env, capture_output=True, text=True, timeout=20

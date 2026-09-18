@@ -26,12 +26,16 @@ def test_recovery_preserves_edits_and_completes_all_three_labs(tmp_path) -> None
     spec.loader.exec_module(module)
     learner_file = tmp_path / "starter" / "src" / "finops_agent" / "demo_connection.py"
     original = learner_file.read_text(encoding="utf-8")
+    dashboard = tmp_path / "workshop-output" / "finops-dashboard.html"
+    dashboard.parent.mkdir()
+    dashboard.write_text("learner-generated dashboard", encoding="utf-8")
     assert module.restore_checkpoint(tmp_path, "1") == []
     assert not (tmp_path / ".workshop-backups").exists()
     module.restore_checkpoint(tmp_path, "all")
     backups = list((tmp_path / ".workshop-backups").glob("*/demo_connection.py"))
     assert len(backups) == 1
     assert backups[0].read_text(encoding="utf-8") == original
+    assert dashboard.read_text(encoding="utf-8") == "learner-generated dashboard"
     env = dict(os.environ, FINOPS_BACKEND="mock", OTEL_SDK_DISABLED="true")
     env.pop("FINOPS_DATA_DIR", None)
     result = subprocess.run(
@@ -46,13 +50,21 @@ def test_recovery_preserves_edits_and_completes_all_three_labs(tmp_path) -> None
 
 
 def test_deployment_fixtures_equal_the_workshop_data() -> None:
+    def load_fixture(path):
+        text = path.read_text(encoding="utf-8")
+        if path.suffix == ".ndjson":
+            return [json.loads(line) for line in text.splitlines() if line.strip()]
+        return json.loads(text)
+
     root = Path(__file__).parents[2]
-    for path in (root / "data").glob("*.json"):
-        expected = json.loads(path.read_text(encoding="utf-8"))
+    fixtures = [
+        *(root / "data").glob("*.json"),
+        *(root / "data").glob("*.ndjson"),
+    ]
+    for path in fixtures:
+        expected = load_fixture(path)
         for project in ("starter", "solution"):
-            actual = json.loads(
-                (root / project / "data" / path.name).read_text(encoding="utf-8")
-            )
+            actual = load_fixture(root / project / "data" / path.name)
             assert actual == expected, (project, path.name)
 
 

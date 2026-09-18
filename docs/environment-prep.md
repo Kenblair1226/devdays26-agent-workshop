@@ -7,9 +7,9 @@
 | 項目 | Lab 1 | Lab 2 | Lab 3 |
 | --- | --- | --- | --- |
 | Git、VS Code、Python 3.13、repo | 必要 | 必要 | 必要 |
-| VS Code Copilot Chat 登入／使用權限 | 分析時必要 | 可作開發輔助 | 不影響 hosting |
+| VS Code Copilot Chat 登入／使用權限 | Ask 分析；選做 dashboard 用 Agent 建檔 | 可作開發輔助 | 不影響 hosting |
 | Copilot SDK 與其 pinned runtime | 報表工具不需要 | 必要 | 必要 |
-| 瀏覽器與可用的 localhost port | Copilot Chat 使用 VS Code | 8098，User/Admin 兩分頁 | 依主辦方環境 |
+| 瀏覽器與可用的 localhost port | 選做 dashboard 用瀏覽器開本機檔案，不佔 port | 8098，User/Admin 兩分頁 | 依主辦方環境 |
 | 個人 Copilot token 或主辦方 BYOK | 不需要 | 模型問答時需要 | 視選定 model provider |
 | Azure CLI 登入或模型 key | 不需要 | Copilot 主線不需要 | Foundry 模型呼叫需其一 |
 | azd ≥1.27.1、Foundry extension、hosting 環境 | 不需要 | 不需要 | 選配 Hosted 部署才需要 |
@@ -51,13 +51,21 @@ python -m finops_agent --data-dir data cost
 
 SDK 固定為 `github-copilot-sdk==1.0.11`，由該 SDK 決定 runtime 版本。不要混用任意 PATH 上的 Copilot CLI。若跳過預下載，SDK 首次使用會下載 runtime，可能中斷操作節奏；**不需要獨立啟動 CLI server 或 Docker**。
 
-預期 baseline：MTD net `4760` AI credits、`44.88` USD、snapshot `2026-09-03T23:59:59Z`。`starter/tests` 與 `starter/checks/test_lab1.py` 應開箱即通過；只有 Lab 2 checks 在完成 SDK TODO 前會失敗。
+預期 baseline：MTD net `4760` AI credits、`44.88` USD、snapshot `2026-09-22T23:59:59Z`。MTD 固定為 **2026-09-01～2026-09-22**，22 天皆有變化的合成樣本；即使課程當天還沒到 9/22，後續日期也是預先模擬，不是預測或真實觀測。`starter/tests` 與 `starter/checks/test_lab1.py` 應開箱即通過；只有 Lab 2 checks 在完成 SDK TODO 前會失敗。
 
 ## Lab 1 Copilot Chat 準備
 
-在 VS Code 登入有 Copilot 權限的 GitHub 帳號，確認能使用 Chat 的 Ask 模式與附檔。先以 `python -m finops_agent brief --output workshop-output/lab1-evidence.json` 產生分析包，再把該 JSON 作為唯一資料附件。檔案已存在時請使用新名稱；工具不覆蓋舊分析。
+在 VS Code 登入有 Copilot 權限的 GitHub 帳號，確認能使用 Chat 的 Ask 模式與附檔。先以 `python -m finops_agent brief --output workshop-output/lab1-evidence.json` 產生分析包，再把該 JSON 作為唯一資料附件。新版應為 `schema_version=2` 且有 `daily_usage`；檔案已存在或是舊版時，改用 `--output workshop-output/lab1-evidence-v2.json`，後續附件與選檔也換成新檔。工具不覆蓋舊分析。
 
 這個練習只用課程內建工具，不需 Docker、SSO、資料同步 PAT 或真實 organization。Copilot Chat 不可用時，與已登入的鄰座共看同一份資料或觀摩講師，不分享帳密；報表工具仍可離線運行。
+
+### 選做 dashboard 的準備
+
+想做 [Lab 1 選做 dashboard](student-lab.md)，再確認 VS Code Copilot Chat 可用 **Agent** 模式建立檔案。它沿用既有 Copilot 登入；不是讓網頁去呼叫模型，**瀏覽器不需要 API key 或 token**。
+
+只允許建立 `workshop-output/finops-dashboard.html`（已有檔案就指定新名字），檢視 Copilot 提議的 edits 後才接受；repo source、`.env` 與資料集都不修改。`starter/src/finops_agent/demo.html` 只當 Clawpilot 主題的唯讀樣式參考，不沿用它的 server／admin API。
+
+產物是自含 HTML/CSS/JS，**不新增依賴、不需 npm、CDN、外部字型、server 或 localhost port**。學員先檢視檔案，再手動開啟，透過 File API 選取 mock evidence；不要自動執行或上傳。若出現 `file://`／CORS 問題，應修正選檔方式，不改成啟動服務。Agent 模式不可用或圖表尚未完成時，保留決策摘要並直接進 Lab 2；選做不影響 Checkpoint 1。
 
 ## Lab 2 模型認證
 
@@ -142,7 +150,7 @@ Foundry hands-on 不是現場從零 provision。建議由 **1 位講師 + 3–4 
 | --- | --- |
 | 環境設計 | 確認地區、hosted/code deployment 支援、模型配額、使用成本上限；完成一套 golden environment |
 | 個人環境建置 | 預建 40 套個人 project/environment，隔離登入與權限；確認 model deployment 名稱、Managed Identity 權限與模型呼叫 |
-| 功能彩排 | 每台/每人安裝 Python、依賴及 runtime；確認 Lab 1 附件分析、Lab 2 User/Admin、Foundry Model 切換及回復；若要部署，另做小批量 deployment/invoke 彩排 |
+| 功能彩排 | 每台/每人安裝 Python、依賴及 runtime；確認 Lab 1 新版附件分析、Lab 2 User/Admin、Foundry Model 切換及回復；若示範選做 dashboard，另核對本機選檔與加總；若要部署，另做小批量 deployment/invoke 彩排 |
 | 開場檢查 | 講師 endpoint 與 logs 可用，備妥範例回應或錄影、checkpoint recovery、TA 分區表 |
 
 只存在 Azure 資源還不夠：每人本機 `starter/.azure/` 必須已綁定正確的個人 azd environment。主辦方依 [Foundry Hosted Agent 部署指南](https://learn.microsoft.com/azure/foundry/agents/how-to/deploy-hosted-agent) 建立與綁定，`starter/azure.yaml` 是 code deployment 設定。不要把含 secrets 的 `.azure/` 複製給全班、提交到 Git，或讓全班共用講師的 admin identity。
