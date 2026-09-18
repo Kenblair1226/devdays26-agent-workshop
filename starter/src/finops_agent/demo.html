@@ -413,7 +413,7 @@
             <div class="quick-prompts" role="group" aria-label="快速提問，按下即送出">
               <button type="button" class="quick-prompt" disabled><span class="quick-number" aria-hidden="true">1</span><span>我目前花費多少？額度還剩多少？</span></button>
               <button type="button" class="quick-prompt" disabled><span class="quick-number" aria-hidden="true">2</span><span>有什麼節省 AI credits 的建議？</span></button>
-              <button type="button" class="quick-prompt" disabled><span class="quick-number" aria-hidden="true">3</span><span>請把我的每月限額提高到 USD 30，理由是下週有 migration 專案。</span></button>
+              <button type="button" class="quick-prompt" disabled><span class="quick-number" aria-hidden="true">3</span><span>請把我的每月限額提高到 USD 220，理由是下週有 migration 專案。</span></button>
             </div>
             <div id="chat-log" class="chat-log" role="log" aria-label="與 FinOps Copilot 的對話紀錄" aria-live="polite" aria-relevant="additions" tabindex="0">
               <p id="chat-empty" class="empty-state">從上方三個問題開始，或在下方輸入你的問題。此處只顯示實際送出的訊息與模型回覆。</p>
@@ -451,7 +451,7 @@
                 <fieldset id="fallback-fields" disabled>
                   <legend class="sr-only">直接提交 mock 額度申請</legend>
                   <label for="new-limit">新的每月限額（USD，整數）</label>
-                  <input id="new-limit" name="new_limit" type="number" min="1" step="1" inputmode="numeric" value="30" required>
+                  <input id="new-limit" name="new_limit" type="number" min="1" step="1" inputmode="numeric" value="220" required>
                   <div class="field">
                     <label for="request-reason">申請理由</label>
                     <textarea id="request-reason" name="reason" rows="3" required>下週有 migration 專案。</textarea>
@@ -575,7 +575,7 @@
       const prompts = [
         "我目前花費多少？額度還剩多少？",
         "有什麼節省 AI credits 的建議？",
-        "請把我的每月限額提高到 USD 30，理由是下週有 migration 專案。"
+        "請把我的每月限額提高到 USD 220，理由是下週有 migration 專案。"
       ];
 
       class DemoError extends Error {

@@ -27,17 +27,17 @@ def test_lab2_harness_checkpoint() -> None:
         costs = await tools["get_my_costs"].handler(ToolInvocation(arguments={}))
         profile = json.loads(costs.text_result_for_llm)
         assert profile["user"] == "carol"
-        assert profile["billing"]["net_amount"] == 14
-        assert profile["budget"]["budget_amount"] == 20
+        assert profile["billing"]["net_amount"] == 102.67
+        assert profile["budget"]["budget_amount"] == 150
         pending = await tools["request_budget_increase"].handler(
-            ToolInvocation(arguments={"new_limit": 30, "reason": "Migration project"})
+            ToolInvocation(arguments={"new_limit": 220, "reason": "Migration project"})
         )
         request = json.loads(pending.text_result_for_llm)
         assert request["status"] == "pending"
-        assert service.profile()["budget"]["remaining_amount"] == 6
+        assert service.profile()["budget"]["remaining_amount"] == 47.33
         service.approve(request["id"], confirmed=True)
-        assert service.profile()["budget"]["budget_amount"] == 30
-        assert service.profile()["budget"]["consumed_amount"] == 14
-        assert service.profile()["budget"]["remaining_amount"] == 16
+        assert service.profile()["budget"]["budget_amount"] == 220
+        assert service.profile()["budget"]["consumed_amount"] == 102.67
+        assert service.profile()["budget"]["remaining_amount"] == 117.33
 
     asyncio.run(exercise())

@@ -21,17 +21,18 @@ def test_brief_reuses_tool_evidence_without_mutations() -> None:
     assert result["schema_version"] == 2
     assert result["backend"] == "mock"
     assert result["cost_summary"] == tools.get_cost_summary()
-    assert result["department_ranking"]["unallocated_quantity"] == 90
+    assert result["department_ranking"]["unallocated_quantity"] == 660
     assert result["leading_department_models"]["department_filter"] == "AI Lab"
     assert result["run_rate_scenario"]["scenario_only"] is True
-    assert result["run_rate_scenario"]["projected_month_end_amount"] == 61.2
+    assert result["run_rate_scenario"]["budget_amount"] == 600
+    assert result["run_rate_scenario"]["projected_month_end_amount"] == 448.8
     assert result["seat_inventory"] == seats_before == tools.list_seats()
     assert result["budget_review"] == budgets_before == tools.list_budgets()
     assert tools.list_action_plans() == []
     assert tools.get_audit_log()["events"] == []
 
 
-def test_brief_daily_samples_reconcile_with_all_dashboard_totals() -> None:
+def test_brief_daily_samples_reconcile_with_dashboard_totals() -> None:
     tools = FinOpsToolbox(MockGitHubFinOpsClient())
     result = build_analysis_brief(tools)
     trend = result["daily_usage"]
@@ -51,18 +52,34 @@ def test_brief_daily_samples_reconcile_with_all_dashboard_totals() -> None:
     assert [row["date"] for row in trend["items"]] == [
         (date(2026, 9, 1) + timedelta(days=offset)).isoformat() for offset in range(22)
     ]
-    assert len({row["net_amount"] for row in trend["items"]}) >= 10
+    assert len({row["net_amount"] for row in trend["items"]}) == 4
+    assert trend["rounding_note"] == summary["rounding_note"]
     for field in ("net_quantity", "net_amount"):
         expected = Decimal(str(summary[field]))
-        for rows in (
-            trend["items"],
-            result["department_ranking"]["ranking"],
-            result["model_breakdown"]["items"],
-            result["user_breakdown"]["items"],
-        ):
-            assert sum(Decimal(str(row[field])) for row in rows) == expected
-    assert result["budget_review"]["budgets"][0]["consumed_amount"] == 45.2
-    assert result["run_rate_scenario"]["consumed_amount"] == 44.88
+        assert sum(Decimal(str(row[field])) for row in trend["items"]) == expected
+    assert result["budget_review"]["budgets"][0]["consumed_amount"] == 331.47
+    assert result["run_rate_scenario"]["consumed_amount"] == 329.12
+
+
+def test_independently_rounded_breakdowns_do_not_replace_overall_totals() -> None:
+    result = build_analysis_brief(FinOpsToolbox(MockGitHubFinOpsClient()))
+    summary = result["cost_summary"]
+    assert summary["net_quantity"] == 34906.67
+    assert summary["net_amount"] == 329.12
+    assert "Independently rounded rows" in summary["rounding_note"]
+    expected_row_sums = (
+        (result["department_ranking"]["ranking"], "34906.67", "329.13"),
+        (result["model_breakdown"]["items"], "34906.66", "329.12"),
+        (result["user_breakdown"]["items"], "34906.67", "329.13"),
+    )
+    for rows, quantity, amount in expected_row_sums:
+        assert sum(Decimal(str(row["net_quantity"])) for row in rows) == Decimal(
+            quantity
+        )
+        assert sum(Decimal(str(row["net_amount"])) for row in rows) == Decimal(amount)
+    for key in ("model_breakdown", "user_breakdown"):
+        assert result[key]["total_net_quantity"] == summary["net_quantity"]
+        assert result[key]["total_net_amount"] == summary["net_amount"]
 
 
 def test_brief_trend_omits_and_labels_missing_days_instead_of_zero(monkeypatch) -> None:
@@ -121,10 +138,10 @@ def test_brief_cli_exports_usable_utf8_without_sdk_or_credentials(
     assert not content.startswith(b"\xef\xbb\xbf")
     brief = json.loads(content.decode("utf-8"))
     assert brief["schema_version"] == 2
-    assert brief["cost_summary"]["net_quantity"] == 4760
+    assert brief["cost_summary"]["net_quantity"] == 34906.67
     assert brief["daily_usage"]["items"][-1]["date"] == "2026-09-22"
     assert len(brief["daily_usage"]["items"]) == 22
-    assert brief["budget_review"]["budgets"][0]["remaining_amount"] == 34.8
+    assert brief["budget_review"]["budgets"][0]["remaining_amount"] == 268.53
     second = subprocess.run(
         command, cwd=root, env=env, capture_output=True, text=True, timeout=20
     )

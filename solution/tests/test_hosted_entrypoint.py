@@ -32,7 +32,7 @@ def test_hosted_success_isolated_per_request(hosted, monkeypatch) -> None:
             toolboxes.append(toolbox)
 
         async def ask(self, prompt):
-            return "AI Lab: 2400 AI credits"
+            return "AI Lab: 17600 AI credits"
 
     monkeypatch.setattr(hosted, "CopilotFinOpsHarness", Harness)
     monkeypatch.setenv("FINOPS_BACKEND", "github")

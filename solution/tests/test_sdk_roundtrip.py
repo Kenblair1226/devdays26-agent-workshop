@@ -31,7 +31,7 @@ from finops_agent.tools import FinOpsToolbox
         ),
         ("get_my_costs", {}),
         ("get_my_savings", {}),
-        ("request_budget_increase", {"new_limit": 30, "reason": "Migration project"}),
+        ("request_budget_increase", {"new_limit": 220, "reason": "Migration project"}),
         (
             "plan_action",
             {
@@ -40,7 +40,7 @@ from finops_agent.tools import FinOpsToolbox
                 "payload": {
                     "budget_scope": "user",
                     "user": "carol",
-                    "budget_amount": 30,
+                    "budget_amount": 220,
                     "budget_type": "BundlePricing",
                     "budget_product_sku": "ai_credits",
                     "prevent_further_usage": True,
@@ -179,7 +179,7 @@ def test_real_sdk_calls_finops_tool_without_cloud_credentials(
                 app = create_demo_app(service)
                 pending = service.requests()[0]
                 assert pending["status"] == "pending"
-                assert service.profile()["budget"]["budget_amount"] == 20
+                assert service.profile()["budget"]["budget_amount"] == 150
                 url = f"/api/admin/requests/{pending['id']}/approve"
                 with TestClient(app) as admin_client:
                     assert (
@@ -201,16 +201,16 @@ def test_real_sdk_calls_finops_tool_without_cloud_credentials(
                     updated = admin_client.get(
                         "/api/user", headers={"X-Demo-Token": app.state.user_token}
                     ).json()
-                    assert updated["budget"]["budget_amount"] == 30
-                    assert updated["budget"]["remaining_amount"] == 16
+                    assert updated["budget"]["budget_amount"] == 220
+                    assert updated["budget"]["remaining_amount"] == 117.33
             elif operation == "get_my_costs":
-                assert "1400" in str(observed["tool_result"])
+                assert "10266.67" in str(observed["tool_result"])
                 assert "remaining_amount" in str(observed["tool_result"])
             else:
                 assert "recommendations" in str(observed["tool_result"])
         elif operation == "rank_department_consumption":
             assert "AI Lab" in str(observed["tool_result"])
-            assert "2400" in str(observed["tool_result"])
+            assert "17600" in str(observed["tool_result"])
         else:
             from finops_agent.local_cli import _confirm_and_execute
 

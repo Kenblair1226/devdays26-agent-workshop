@@ -20,10 +20,10 @@ def test_demo_is_bound_to_user_and_reuses_sdk_harness() -> None:
     demo = service()
     profile = demo.profile()
     assert profile["user"] == "carol"
-    assert profile["billing"]["net_amount"] == 14
-    assert profile["billing"]["net_quantity"] == 1400
-    assert profile["budget"]["budget_amount"] == 20
-    assert profile["budget"]["remaining_amount"] == 6
+    assert profile["billing"]["net_amount"] == 102.67
+    assert profile["billing"]["net_quantity"] == 10266.67
+    assert profile["budget"]["budget_amount"] == 150
+    assert profile["budget"]["remaining_amount"] == 47.33
     assert "alice" not in json.dumps(demo.savings())
     harness = build_demo_harness(demo)
     assert harness.toolbox is demo.toolbox
@@ -42,19 +42,19 @@ def test_demo_rejects_real_client() -> None:
 
 def test_pending_then_explicit_admin_approval_changes_limit_once() -> None:
     demo = service()
-    request = demo.request_increase(30, "Migration project")
-    duplicate = demo.request_increase(30, "Migration project")
+    request = demo.request_increase(220, "Migration project")
+    duplicate = demo.request_increase(220, "Migration project")
     assert request == duplicate
     assert request["status"] == "pending"
-    assert demo.profile()["budget"]["budget_amount"] == 20
-    assert demo.profile()["budget"]["remaining_amount"] == 6
+    assert demo.profile()["budget"]["budget_amount"] == 150
+    assert demo.profile()["budget"]["remaining_amount"] == 47.33
     with pytest.raises(PermissionError):
         demo.approve(request["id"], confirmed=False)
     approved = demo.approve(request["id"], confirmed=True)
     assert approved["status"] == "approved"
-    assert demo.profile()["budget"]["budget_amount"] == 30
-    assert demo.profile()["budget"]["consumed_amount"] == 14
-    assert demo.profile()["budget"]["remaining_amount"] == 16
+    assert demo.profile()["budget"]["budget_amount"] == 220
+    assert demo.profile()["budget"]["consumed_amount"] == 102.67
+    assert demo.profile()["budget"]["remaining_amount"] == 117.33
     before = demo.toolbox.get_audit_log()
     assert demo.approve(request["id"], confirmed=True) == approved
     assert demo.toolbox.get_audit_log() == before
@@ -64,13 +64,13 @@ def test_pending_then_explicit_admin_approval_changes_limit_once() -> None:
 @pytest.mark.parametrize(
     "amount,reason",
     [
-        (20, "No increase"),
-        (19, "Decrease"),
+        (150, "No increase"),
+        (149, "Decrease"),
         (True, "Wrong type"),
-        (30.5, "Non-integer"),
-        (30, ""),
-        (30, " " * 5),
-        (30, "x" * 501),
+        (220.5, "Non-integer"),
+        (220, ""),
+        (220, " " * 5),
+        (220, "x" * 501),
     ],
 )
 def test_demo_rejects_invalid_limit_requests(amount, reason) -> None:
@@ -82,23 +82,23 @@ def test_demo_rejects_invalid_limit_requests(amount, reason) -> None:
 
 def test_pending_request_cannot_be_replaced_or_externally_mutated() -> None:
     demo = service()
-    request = demo.request_increase(30, "Migration")
+    request = demo.request_increase(220, "Migration")
     request["requested_limit"] = 999
-    assert demo.requests()[0]["requested_limit"] == 30
+    assert demo.requests()[0]["requested_limit"] == 220
     with pytest.raises(ValueError, match="already pending"):
-        demo.request_increase(40, "Changed my mind")
+        demo.request_increase(230, "Changed my mind")
 
 
 def test_stale_request_is_not_approved() -> None:
     demo = service()
-    request = demo.request_increase(30, "Migration")
+    request = demo.request_increase(220, "Migration")
     demo.toolbox.client.execute_action(
-        "update_budget", "budget-user-carol", {"budget_amount": 25}
+        "update_budget", "budget-user-carol", {"budget_amount": 175}
     )
     with pytest.raises(ValueError, match="changed since"):
         demo.approve(request["id"], confirmed=True)
     assert demo.requests()[0]["status"] == "pending"
-    assert demo.profile()["budget"]["budget_amount"] == 25
+    assert demo.profile()["budget"]["budget_amount"] == 175
 
 
 def test_model_has_no_admin_tools_or_identity_override() -> None:
@@ -110,7 +110,7 @@ def test_model_has_no_admin_tools_or_identity_override() -> None:
     result = asyncio.run(
         tools["request_budget_increase"].handler(
             ToolInvocation(
-                arguments={"new_limit": 30, "reason": "Migration", "user": "alice"}
+                arguments={"new_limit": 220, "reason": "Migration", "user": "alice"}
             )
         )
     )
@@ -136,12 +136,12 @@ def test_http_roles_enforced_and_balance_refreshes(app) -> None:
             "/api/requests",
             headers=user_headers,
             json={
-                "new_limit": 30,
+                "new_limit": 220,
                 "reason": "Migration",
             },
         )
         assert created.status_code == 200
-        assert created.json()["profile"]["budget"]["budget_amount"] == 20
+        assert created.json()["profile"]["budget"]["budget_amount"] == 150
         request_id = created.json()["request"]["id"]
         url = f"/api/admin/requests/{request_id}/approve"
         assert (
@@ -157,8 +157,8 @@ def test_http_roles_enforced_and_balance_refreshes(app) -> None:
         response = client.post(url, headers=admin_headers, json={"confirmed": True})
         assert response.status_code == 200
         profile = client.get("/api/user", headers=user_headers).json()
-        assert profile["budget"]["budget_amount"] == 30
-        assert profile["budget"]["remaining_amount"] == 16
+        assert profile["budget"]["budget_amount"] == 220
+        assert profile["budget"]["remaining_amount"] == 117.33
         assert profile["requests"][0]["status"] == "approved"
         assert app.state.admin_token not in json.dumps(profile)
 
@@ -170,7 +170,7 @@ def test_http_request_cannot_choose_another_identity(app) -> None:
             headers={
                 "X-Demo-Token": app.state.user_token,
             },
-            json={"user": "alice", "new_limit": 30, "reason": "Migration"},
+            json={"user": "alice", "new_limit": 220, "reason": "Migration"},
         )
     assert result.status_code == 400
     assert app.state.service.requests() == []
@@ -179,7 +179,7 @@ def test_http_request_cannot_choose_another_identity(app) -> None:
 def test_http_chat_uses_scoped_harness_and_never_approves(app, monkeypatch) -> None:
     async def ask(message):
         assert message == "raise my limit"
-        app.state.service.request_increase(30, "Migration")
+        app.state.service.request_increase(220, "Migration")
         return "Request pending admin approval.", ["request_budget_increase"]
 
     monkeypatch.setattr(app.state.chat, "ask", ask)
@@ -192,7 +192,7 @@ def test_http_chat_uses_scoped_harness_and_never_approves(app, monkeypatch) -> N
             json={"message": "raise my limit"},
         )
     assert result.status_code == 200
-    assert result.json()["profile"]["budget"]["budget_amount"] == 20
+    assert result.json()["profile"]["budget"]["budget_amount"] == 150
     assert result.json()["profile"]["requests"][0]["status"] == "pending"
 
 
@@ -218,6 +218,9 @@ def test_demo_page_does_not_embed_any_role_capability(app) -> None:
     assert app.state.admin_token not in response.text
     assert response.headers["referrer-policy"] == "no-referrer"
     assert response.headers["cache-control"] == "no-store"
+    assert "提高到 USD 220" in response.text
+    assert 'value="220"' in response.text
+    assert "提高到 USD 30" not in response.text
 
 
 @pytest.mark.parametrize(
@@ -245,11 +248,11 @@ def test_chat_failures_do_not_fake_success_or_approval(app, monkeypatch, error):
     assert "reply" not in result.json()
     assert "sensitive provider details" not in result.text
     assert app.state.service.requests() == []
-    assert app.state.service.profile()["budget"]["budget_amount"] == 20
+    assert app.state.service.profile()["budget"]["budget_amount"] == 150
 
 
 def test_failed_application_never_marks_the_request_approved(app, monkeypatch):
-    request = app.state.service.request_increase(30, "Migration")
+    request = app.state.service.request_increase(220, "Migration")
     backend = app.state.service.toolbox.client
     original = backend.execute_action
 
@@ -263,7 +266,7 @@ def test_failed_application_never_marks_the_request_approved(app, monkeypatch):
         response = client.post(url, headers=headers, json={"confirmed": True})
         assert response.status_code == 503
         assert app.state.service.requests()[0]["status"] == "pending"
-        assert app.state.service.profile()["budget"]["budget_amount"] == 20
+        assert app.state.service.profile()["budget"]["budget_amount"] == 150
         monkeypatch.setattr(backend, "execute_action", original)
         assert (
             client.post(url, headers=headers, json={"confirmed": True}).status_code

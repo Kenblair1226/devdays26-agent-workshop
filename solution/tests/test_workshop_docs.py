@@ -19,6 +19,15 @@ def lab1_dashboard_instructions() -> str:
     return text.split("### 選做（optional）", 1)[1].split("**接著進 Lab 2", 1)[0]
 
 
+def markdown_table_rows(text: str) -> dict[str, list[str]]:
+    rows = {}
+    for line in text.splitlines():
+        if line.startswith("|"):
+            cells = [cell.strip() for cell in line.split("|")[1:-1]]
+            rows[cells[0]] = cells[1:]
+    return rows
+
+
 def test_workshop_keeps_exactly_three_labs() -> None:
     root = Path(__file__).parents[2]
     text = (root / "docs" / "student-lab.md").read_text(encoding="utf-8")
@@ -68,7 +77,7 @@ def test_dashboard_prompt_uses_reviewed_single_file_creation_and_local_loading()
         "Ask",
         "Agent",
         "workshop-output/lab1-evidence.json",
-        "lab1-evidence-v2.json",
+        "lab1-evidence-v3.json",
         "workshop-output/finops-dashboard.html",
         "starter/src/finops_agent/demo.html",
         "唯讀",
@@ -113,7 +122,7 @@ def test_dashboard_prompt_preserves_evidence_dimensions_and_failure_states() -> 
     assert "不能自動判成可回收" in dashboard
 
 
-def test_workshop_documents_use_the_fixed_resimulated_september_snapshot() -> None:
+def test_workshop_documents_extrapolate_the_original_three_day_baseline() -> None:
     root = Path(__file__).parents[2]
     for path in (
         root / "README.md",
@@ -121,32 +130,121 @@ def test_workshop_documents_use_the_fixed_resimulated_september_snapshot() -> No
         root / "docs" / "environment-prep.md",
         root / "data" / "README.md",
     ):
-        text = path.read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8").replace(",", "")
         for required in (
             "2026-09-22T23:59:59Z",
             "2026-09-01",
+            "2026-09-03",
             "2026-09-22",
             "schema_version=2",
             "daily_usage",
+            "22 / 3",
+            "34906.67",
+            "329.12",
+            "線性外推",
             "預先模擬",
+            "user/model",
         ):
             assert required in text, (path.name, required)
+        assert re.search(r"不是.*實測", text), path.name
+        assert "沒有平日／週末季節性模型" in text, path.name
+
+
+def test_original_totals_are_labelled_as_baseline_not_current_mtd() -> None:
     for path in workshop_documents():
         text = path.read_text(encoding="utf-8")
-        for stale in ("2026-09-03", "2026-08-07", "448.80"):
+        for line in text.splitlines():
+            if re.search(r"(?<!\d)(?:4,?760|44\.88)(?!\d)", line):
+                assert "22 / 3" in line, (path.name, line)
+                assert re.search(r"2026-09-01～2026-09-03|September 1–3", line), (
+                    path.name,
+                    line,
+                )
+        for stale in (
+            "2026-08-07",
+            "61.20",
+            "35.12",
+            "保留既有 MTD 總數",
+            "總量維持",
+        ):
             assert stale not in text, (path.name, stale)
+
+
+def test_data_notes_document_scaled_department_and_model_totals() -> None:
+    root = Path(__file__).parents[2]
+    text = (root / "data" / "README.md").read_text(encoding="utf-8")
+    rows = markdown_table_rows(text.replace(",", ""))
+    expected = {
+        "全體": ["34906.67", "329.12"],
+        "AI Lab": ["17600.00", "190.67"],
+        "Platform Engineering": ["5866.67", "50.75"],
+        "Security": ["5646.67", "52.95"],
+        "Mobile": ["5133.33", "30.80"],
+        "Unallocated": ["660.00", "3.96"],
+        "`gpt-5.4`": ["18920.00", "189.20"],
+        "`gpt-5-mini`": ["8653.33", "51.92"],
+        "`claude-opus-5`": ["7333.33", "88.00"],
+    }
+    for label, values in expected.items():
+        assert rows[label] == values, label
+
+
+def test_data_notes_separate_billing_budgets_and_observation_windows() -> None:
+    root = Path(__file__).parents[2]
     data_notes = (root / "data" / "README.md").read_text(encoding="utf-8")
     for required in (
         "2026-08-26",
         "2026-08-31",
         "sparse_training_samples",
         "daily_samples",
-        "61.20",
+        "7 個週期",
+        "三天平均",
+        "13,066.67",
+        "active_days",
+        "forecast 600",
+        "329.12 ÷ 22",
+        "448.80",
         "projected_over_budget=false",
-        "45.20",
-        "34.80",
+        "600 − 329.12 = 270.88",
+        "限額 600／已用 331.47／剩餘 268.53",
+        "限額 150／已用 102.67／剩餘 47.33",
+        "限額 220／已用 102.67 不變／剩餘 117.33",
+        "USD 19.07",
+        "下個月回收 1 seat",
     ):
         assert required in data_notes, required
+
+
+def test_rounding_notes_do_not_replace_totals_with_rounded_subtotal_sums() -> None:
+    root = Path(__file__).parents[2]
+    for path in (
+        root / "data" / "README.md",
+        root / "docs" / "student-lab.md",
+        root / "docs" / "instructor-guide.md",
+    ):
+        text = path.read_text(encoding="utf-8").replace(",", "")
+        for required in (
+            "rounding_note",
+            "四捨五入",
+            "0.01",
+            "34906.66",
+            "34906.67",
+            "329.13",
+            "329.12",
+        ):
+            assert required in text, (path.name, required)
+    dashboard = lab1_dashboard_instructions()
+    for required in ("百分之一 credit", "cents", "容差", "每日顯示值恰好對回全體"):
+        assert required in dashboard, required
+
+
+def test_workshop_requires_fresh_evidence_despite_unchanged_schema_and_date() -> None:
+    for path in workshop_documents():
+        text = path.read_text(encoding="utf-8")
+        for required in ("lab1-evidence-v3.json", "舊檔", "新檔", "9/22"):
+            assert required in text, (path.name, required)
+        assert re.search(r"schema(?:_version=|\s*)2", text), path.name
+        assert re.search(r"重新(?:產生|執行)|另產生新檔", text), path.name
 
 
 def test_optional_dashboard_is_visible_in_overviews_preparation_and_recovery() -> None:
@@ -260,12 +358,19 @@ def test_lab2_is_one_connection_and_a_visible_approval_flow() -> None:
         "python -m finops_agent demo",
         "pending",
         "approved",
-        "30",
-        "16",
+        "150",
+        "220",
+        "102.67",
+        "47.33",
+        "117.33",
         "管理者",
     ):
         assert required in lab2
     assert "編輯 `starter/src/finops_agent/sdk_tools.py`" not in lab2
+    rows = markdown_table_rows(lab2)
+    assert rows["開始"] == ["150", "102.67", "47.33", "尚未申請"]
+    assert rows["使用者申請"] == ["150", "102.67", "47.33", "pending"]
+    assert rows["管理者核准"] == ["220", "102.67", "117.33", "approved"]
 
 
 def test_lab3_includes_model_switch_without_requiring_new_tool_services() -> None:
@@ -281,6 +386,11 @@ def test_lab3_includes_model_switch_without_requiring_new_tool_services() -> Non
         "FINOPS_BACKEND",
         "FINOPS_ALLOW_REAL_WRITES",
         "pending",
+        "150",
+        "220",
+        "102.67",
+        "47.33",
+        "117.33",
         "Copilot",
         "重啟",
         "選配",

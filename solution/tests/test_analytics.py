@@ -13,8 +13,8 @@ def test_month_to_date_cost_summary() -> None:
     result = toolbox().get_cost_summary()
 
     assert result["period"]["label"] == "month_to_date"
-    assert result["net_quantity"] == 4760
-    assert result["net_amount"] == 44.88
+    assert result["net_quantity"] == 34906.67
+    assert result["net_amount"] == 329.12
     assert result["as_of"] == "2026-09-22T23:59:59Z"
     assert result["unit"] == "AI credits"
     assert "not raw model tokens" in result["quantity_note"]
@@ -25,6 +25,9 @@ def test_month_to_date_cost_summary() -> None:
     }
     assert result["granularity"] == "daily_samples"
     assert "not actual GitHub" in result["pricing_note"]
+    assert result["simulation_basis"]["scale_numerator"] == 22
+    assert result["simulation_basis"]["scale_denominator"] == 3
+    assert "unrounded records" in result["rounding_note"]
 
 
 def test_department_ranking_keeps_unallocated_usage() -> None:
@@ -33,11 +36,11 @@ def test_department_ranking_keeps_unallocated_usage() -> None:
     assert result["ranking"][0] == {
         "rank": 1,
         "department": "AI Lab",
-        "net_quantity": 2400,
-        "net_amount": 26,
+        "net_quantity": 17600,
+        "net_amount": 190.67,
         "user_count": 2,
     }
-    assert result["unallocated_quantity"] == 90
+    assert result["unallocated_quantity"] == 660
     unallocated = next(
         row for row in result["ranking"] if row["department"] == "Unallocated"
     )
@@ -50,10 +53,10 @@ def test_model_breakdown_and_forecast() -> None:
     tools = toolbox()
 
     breakdown = tools.break_down_usage("model")
-    forecast = tools.forecast_budget(80)
+    forecast = tools.forecast_budget(600)
 
     assert breakdown["items"][0]["model"] == "gpt-5.4"
-    assert forecast["projected_month_end_amount"] == 61.2
+    assert forecast["projected_month_end_amount"] == 448.8
     assert forecast["projected_over_budget"] is False
     assert forecast["scenario_only"] is True
     assert "run-rate" in forecast["method"]
@@ -88,10 +91,11 @@ def test_recommendations_are_evidence_backed() -> None:
 @pytest.mark.parametrize(
     ("period", "start", "end", "quantity", "amount"),
     [
-        ("today", None, None, 275, 2.53),
-        ("last_28_days", None, None, 5060, 47.88),
+        ("today", None, None, 1586.67, 14.96),
+        ("last_28_days", None, None, 35206.67, 332.12),
         ("custom", "2026-08-31", "2026-08-31", 300, 3),
-        ("custom", "2026-09-01", "2026-09-01", 320, 3.02),
+        ("custom", "2026-09-01", "2026-09-01", 2240, 20.72),
+        ("custom", "2026-09-01", "2026-09-03", 4760, 44.88),
     ],
 )
 def test_supported_sample_periods(period, start, end, quantity, amount) -> None:
@@ -137,12 +141,12 @@ def test_department_drilldown_and_limit_preserve_totals() -> None:
     tools = toolbox()
     result = tools.break_down_usage("user", department="ai lab")
 
-    assert result["total_net_quantity"] == 2400
-    assert result["total_net_amount"] == 26
+    assert result["total_net_quantity"] == 17600
+    assert result["total_net_amount"] == 190.67
     assert {row["user"] for row in result["items"]} == {"carol", "dave"}
     limited = tools.break_down_usage("model", limit=1)
     assert len(limited["items"]) == 1
-    assert limited["total_net_quantity"] == 4760
+    assert limited["total_net_quantity"] == 34906.67
 
 
 @pytest.mark.parametrize("limit", [0, -1, True, 1.5])
@@ -183,12 +187,12 @@ def test_forecast_rejects_non_finite_or_invalid_budget(amount) -> None:
 )
 def test_forecast_requires_month_start_to_snapshot_date(period, start, end) -> None:
     with pytest.raises(ValueError, match="month-start-to-date"):
-        toolbox().forecast_budget(80, period, start, end)
+        toolbox().forecast_budget(600, period, start, end)
 
 
 def test_forecast_accepts_an_equivalent_fixed_mtd_window() -> None:
-    result = toolbox().forecast_budget(80, "custom", "2026-09-01", "2026-09-22")
-    assert result["projected_month_end_amount"] == 61.2
+    result = toolbox().forecast_budget(600, "custom", "2026-09-01", "2026-09-22")
+    assert result["projected_month_end_amount"] == 448.8
 
 
 def test_empty_loaded_report_is_not_zero(monkeypatch) -> None:

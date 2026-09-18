@@ -29,13 +29,13 @@ python -m finops_agent brief --output .\workshop-output\lab1-evidence.json
 ```
 
 bash：`PYTHONPATH=starter/src FINOPS_BACKEND=mock python -m finops_agent cost`。
-基準答案為 MTD **4,760 net AI credits / USD 44.88**，部門第一名是 **AI Lab，2,400 credits / USD 26**。快照固定在 **`2026-09-22T23:59:59Z`**，MTD 是 **2026-09-01～2026-09-22**，不是今天。這次將合成月累計重新模擬為有高低變化的 22 天樣本，總數保留；若在 9/22 前查看，後續日期也是預先模擬的教學資料，不是預測或真實帳單。
+基準答案為 MTD **34,906.67 net AI credits / USD 329.12**，部門第一名是 **AI Lab，17,600 credits / USD 190.67**。快照固定在 **`2026-09-22T23:59:59Z`**，MTD 是 **2026-09-01～2026-09-22**，不是今天。計算基礎是原始 **2026-09-01～2026-09-03 的 4,760 credits／USD 44.88，乘上 22 / 3**，不是把三天總數攤薄到 22 天。保留原始三天資料，重複三天活動模式到 9/21，9/22 使用各 user/model 的三天平均。這是合成資料的線性外推，不是實測或經驗證的預測；未來日期也是預先模擬，沒有平日／週末季節性模型。
 
-把生成的 evidence JSON 附到 VS Code Copilot Chat 的 **Ask** 模式，用 Lab 1 的調查 prompts 找出有依據的行動。新版 `schema_version=2` 加入 `daily_usage`，每日 credits／USD 分別加總回上述 MTD；缺日不能補成零，完整口徑見 [資料說明](data/README.md)。`brief` 不會覆蓋舊檔；已有輸出時可改用 `--output workshop-output/lab1-evidence-v2.json`，並把新檔附到 Chat。
+把生成的 evidence JSON 附到 VS Code Copilot Chat 的 **Ask** 模式，用 Lab 1 的調查 prompts 找出有依據的行動。`schema_version=2` 的 `daily_usage` 每日 credits／USD 分別加總回上述 MTD；原始資料保留小數精度，先加總再顯示兩位小數，跨部門／模型小計可能差 0.01，不能因此改寫全體總額。缺日不能補成零，完整口徑見 [資料說明](data/README.md)。**請用更新後的資料重新產生 evidence**：舊檔也可能已是 schema 2 與 9/22 快照，不能只靠日期或 schema 判斷。`brief` 不會覆蓋舊檔；可改用 `--output workshop-output/lab1-evidence-v3.json`，並把新檔附到 Chat、載入選做 dashboard。
 
 Lab 1 聚焦成本總覽、seat review、部門歸屬、預算與 what-if。完成決策摘要後，可依 [學員手冊的選做流程](docs/student-lab.md) 改用 Copilot **Agent** 模式，檢視它提議的 edits，僅建立 `workshop-output/finops-dashboard.html`。網頁用 File API 選取同一份新版 mock evidence；不用安裝套件、CDN、API key 或 server，也不讀真實組織資料。不修改 repo source／`.env`，不自動執行或上傳生成結果；dashboard 是 Lab 1 延伸，不增加 Lab 或核心 checkpoint。
 
-Lab 2 接線後執行 `python -m finops_agent demo`，開啟終端提供的 User / Admin 兩個連結。User 扮演 carol：已用 USD 14、限額 20、剩餘 6；要求提高至 30 後先維持 pending，管理者確認後變成 **限額 30、剩餘 16**。不需複製 plan ID、token 或輸入 JSON。
+Lab 2 接線後執行 `python -m finops_agent demo`，開啟終端提供的 User / Admin 兩個連結。User 扮演 carol：已用 USD 102.67、限額 150、剩餘 47.33；要求提高至 220 後先維持 pending、額度不變，管理者確認後變成 **限額 220、已用 102.67 不變、剩餘 117.33**。不需複製 plan ID、token 或輸入 JSON。
 
 Lab 3 只新增 **Foundry Model 切換**，不加入 Toolbox 或其他服務。依 [課前模型設定](docs/environment-prep.md#lab-3-foundry-model-課前準備) 選用既有 `foundry-identity`／`foundry-key` provider，重啟同一個本機 demo；SDK、個人工具、mock 資料和 admin approval 不變。呼叫 Foundry 模型不等於 Hosted Agent 已部署，原有 hosting 留作選配。
 

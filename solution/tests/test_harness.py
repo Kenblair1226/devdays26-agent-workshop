@@ -75,7 +75,7 @@ def runtime(monkeypatch):
                 return
             self.callback(
                 SimpleNamespace(
-                    data=AssistantMessageData(content="AI Lab: 2400", message_id="m1")
+                    data=AssistantMessageData(content="AI Lab: 17600", message_id="m1")
                 )
             )
             self.callback(SimpleNamespace(data=SessionIdleData()))
@@ -108,8 +108,8 @@ def test_local_conversation_uses_only_explicit_tools_and_cleans_up(runtime) -> N
     async def run():
         harness = CopilotFinOpsHarness(FinOpsToolbox(MockGitHubFinOpsClient()))
         async with harness.conversation():
-            assert await harness.ask("first") == "AI Lab: 2400"
-            assert await harness.ask("follow up") == "AI Lab: 2400"
+            assert await harness.ask("first") == "AI Lab: 17600"
+            assert await harness.ask("follow up") == "AI Lab: 17600"
         return harness
 
     asyncio.run(run())
@@ -244,19 +244,19 @@ def test_foundry_model_preserves_scoped_tools_and_human_approval(
                 assert await get_token(token_args) == "token-2"
 
             result = await tools["request_budget_increase"].handler(
-                ToolInvocation(arguments={"new_limit": 30, "reason": "Migration"})
+                ToolInvocation(arguments={"new_limit": 220, "reason": "Migration"})
             )
             pending = json.loads(result.text_result_for_llm)
             assert pending["status"] == "pending"
-            assert service.profile()["budget"]["budget_amount"] == 20
-            assert service.profile()["budget"]["remaining_amount"] == 6
+            assert service.profile()["budget"]["budget_amount"] == 150
+            assert service.profile()["budget"]["remaining_amount"] == 47.33
             with pytest.raises(PermissionError):
                 service.approve(pending["id"], confirmed=False)
             service.approve(pending["id"], confirmed=True)
             budget = service.profile()["budget"]
-            assert budget["budget_amount"] == 30
-            assert budget["consumed_amount"] == 14
-            assert budget["remaining_amount"] == 16
+            assert budget["budget_amount"] == 220
+            assert budget["consumed_amount"] == 102.67
+            assert budget["remaining_amount"] == 117.33
 
     asyncio.run(run())
     client = runtime["clients"][0]

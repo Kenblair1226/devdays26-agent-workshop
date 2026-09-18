@@ -182,7 +182,7 @@ def test_mapping_deduplicates_identical_casefolded_logins_without_team_fanout() 
         metadata=client.usage_metadata,
     )
     ranking = analyzer.rank_departments(analyzer.resolve_period())
-    assert ranking["ranking"][0]["net_quantity"] == 2400
+    assert ranking["ranking"][0]["net_quantity"] == 17600
     assert ranking["ranking"][0]["user_count"] == 2
     assert UsageItem.from_dict(usage_dict()).user == "alice"
 
@@ -300,21 +300,24 @@ def test_legacy_fixture_coverage_follows_its_snapshot(mutate_snapshot) -> None:
         "end": "2026-09-22",
         "kind": "sparse_training_samples",
     }
-    assert FinOpsToolbox(client).get_cost_summary()["net_quantity"] == 4760
+    assert FinOpsToolbox(client).get_cost_summary()["net_quantity"] == 34906.67
 
 
 def test_budget_remaining_uses_budget_specific_consumption_and_scope() -> None:
     tools = FinOpsToolbox(MockGitHubFinOpsClient())
     result = tools.list_budgets()
     organization, user = result["budgets"]
-    assert organization["consumed_amount"] == 45.2
-    assert organization["remaining_amount"] == 34.8
+    assert organization["budget_amount"] == 600
+    assert organization["consumed_amount"] == 331.47
+    assert organization["remaining_amount"] == 268.53
     assert organization["consumption_basis"] == "organization_metered_spend"
-    assert user["remaining_amount"] == 6
+    assert user["budget_amount"] == 150
+    assert user["consumed_amount"] == 102.67
+    assert user["remaining_amount"] == 47.33
     assert user["consumption_basis"] == "user_total_spend"
     assert all(row["currency"] == "USD" for row in result["budgets"])
     assert all(row["as_of"] == result["as_of"] for row in result["budgets"])
-    assert tools.forecast_budget(80)["remaining_amount"] == 35.12
+    assert tools.forecast_budget(600)["remaining_amount"] == 270.88
 
 
 @pytest.mark.parametrize("missing", [True, False])
@@ -340,7 +343,7 @@ def test_invalid_consumed_amount_is_rejected(value) -> None:
 
 def test_overdrawn_budget_is_not_clamped() -> None:
     client = MockGitHubFinOpsClient()
-    client._budgets[0]["consumed_amount"] = 85
+    client._budgets[0]["consumed_amount"] = 605
     assert client.list_budgets()[0]["remaining_amount"] == -5
 
 
@@ -350,7 +353,7 @@ def test_unverified_budget_units_are_not_claimed_to_be_usd() -> None:
         budget_type="SkuPricing", budget_product_sku="license-based-example"
     )
     result = client.list_budgets()[0]
-    assert result["remaining_amount"] == 34.8
+    assert result["remaining_amount"] == 268.53
     assert result["currency"] is None
     assert result["amount_unit"] == "provider_budget_units"
     assert "may count licenses" in result["scope_note"]

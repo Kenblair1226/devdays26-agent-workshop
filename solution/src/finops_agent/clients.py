@@ -101,6 +101,7 @@ class MockGitHubFinOpsClient:
         self._organization = _text(usage.get("organization"), "usage.organization")
         self._as_of = _timestamp(usage.get("as_of"), "usage.as_of")
         self._currency = _text(usage.get("currency"), "usage.currency")
+        self._simulation_basis = deepcopy(usage.get("simulation_basis"))
         self._retrieved_at = datetime.now(UTC).isoformat()
         for name, snapshot in (("seats", seats), ("budgets", budgets)):
             if (
@@ -191,6 +192,11 @@ class MockGitHubFinOpsClient:
             "granularity": "daily_samples",
             "coverage": self.coverage,
             "pricing_note": "Teaching figures only; not actual GitHub model rates.",
+            "simulation_basis": deepcopy(self._simulation_basis),
+            "rounding_note": (
+                "Totals use unrounded records before rounding to two decimal places. "
+                "Independently rounded rows can differ slightly from displayed totals."
+            ),
             "limitations": [
                 "Intentionally sparse training data. Totals describe supplied samples, "
                 "not a complete organization; missing days are not observed zeros.",
@@ -211,6 +217,8 @@ class MockGitHubFinOpsClient:
             "retrieved_at": self.retrieved_at,
             "limitations": [
                 "Fixed 28-day sample metrics, separate from the billing query period.",
+                "Credit volume extends the synthetic three-day per-user baseline "
+                "over 28 days; activity and completion counts are separate examples.",
                 "Acceptance rate is not raw-token usage or proof of waste.",
             ],
         }

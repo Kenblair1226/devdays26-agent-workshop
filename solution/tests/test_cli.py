@@ -42,7 +42,7 @@ def test_lab1_runs_without_sdk_or_azure_packages() -> None:
         text=True,
         check=True,
     )
-    assert json.loads(result.stdout)["net_quantity"] == 4760
+    assert json.loads(result.stdout)["net_quantity"] == 34906.67
 
 
 def test_mock_rehearsal_never_uses_real_backend() -> None:

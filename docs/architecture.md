@@ -32,7 +32,9 @@ Lab 1 的現成 deterministic CLI 不載入 Copilot 或 Azure client；只需要
 
 `starter/src/finops_agent/demo.html` 僅供唯讀參考完整 Clawpilot `--cp-*` 變數、light/dark 機制與 Segoe UI 字體，不複製其 admin／API 行為。Dashboard 不提供 seat／budget 變更按鈕或 approval tools；JSON 字串以 `textContent` 呈現，不送進 `innerHTML`。空白狀態、schema／加總錯誤與未知日期都要明確顯示，圖表另附表格與鍵盤可用的控制項。
 
-新版 `brief` 為 `schema_version=2`，`daily_usage.items` 只有 `date`、`net_quantity`、`net_amount`，credits／USD 分別加總回 `cost_summary`。部門與模型排行來自 `department_ranking.ranking`、`model_breakdown.items`，保留 `Unallocated`；日彙總不含這些維度，不能做臆造的部門／模型每日 cross-filter。Budget、seat 與 run-rate scenario 分區呈現，不共享或互相覆蓋 consumed／remaining。
+`brief` 為 `schema_version=2`，`daily_usage.items` 只有 `date`、`net_quantity`、`net_amount`，每日顯示值的 credits／USD 分別恰好加總回 `cost_summary`。部門與模型排行來自 `department_ranking.ranking`、`model_breakdown.items`，保留 `Unallocated`；各維度小計獨立四捨五入，檢核需有界容差，不能拿取整後的小計改寫全體。日彙總不含這些維度，不能做臆造的部門／模型每日 cross-filter。Budget、seat 與 run-rate scenario 分區呈現，不共享或互相覆蓋 consumed／remaining。
+
+更新資料後必須重新產生並載入 evidence 新檔，例如 `workshop-output/lab1-evidence-v3.json`，不覆蓋舊成果。舊檔也可能同為 schema 2 與 9/22 快照，不能只靠版本／日期辨識這次 22 / 3 外推的資料。
 
 ## Lab 2：個人 FinOps 與管理者核准
 
@@ -43,11 +45,11 @@ flowchart LR
     H --> T["get_my_costs / get_my_savings"]
     H --> R["request_budget_increase"]
     T --> D["BudgetDemo / scoped mock evidence"]
-    R --> P["Pending request / limit still 20"]
+    R --> P["Pending request / limit still 150 / remaining 47.33"]
     A["Admin page"] -->|"separate admin capability + human click"| Approve["ApprovalWorkflow"]
     P --> Approve
-    Approve --> M["Mock budget: 20 -> 30"]
-    M --> Refresh["User refresh: consumed 14 / remaining 16"]
+    Approve --> M["Mock budget: 150 -> 220"]
+    M --> Refresh["User refresh: consumed 102.67 / remaining 117.33"]
     Refresh --> U
 ```
 
@@ -114,9 +116,13 @@ Mock seats、budgets、plans、audit 都只存在目前程序。稽核事件記�
 
 Synthetic files 是**內部 normalized schema**，不是可原封不動代入 GitHub API 的 response。Billing amount、net credits、原始 tokens 不能混為一談；fixture 單價為教學用，不是 GitHub 公告價格。
 
-快照固定為 `2026-09-22T23:59:59Z`，MTD 是 2026-09-01～2026-09-22。9 月 22 天的高低變化是重新模擬的教學樣本，總量維持 4,760 net AI credits／USD 44.88；在 9/22 前查看時，未來日期也是預先模擬，不是預測或真實觀測。Billing coverage 為 2026-08-26～2026-09-22、`sparse_training_samples`，8 月只有 8/31 樣本；缺日未知、不補零。9 月每天有樣本不保證真實組織帳務完整，趨勢應呈現樣本限制，`missing_dates` 有缺日就斷線。
+快照固定為 `2026-09-22T23:59:59Z`，MTD 是 2026-09-01～2026-09-22。原始 **2026-09-01～2026-09-03 的 4,760 net AI credits／USD 44.88 乘上 22 / 3**，得到 **34,906.67 credits／USD 329.12**。來源三天保留，三天模式共重複 7 個週期至 9/21，9/22 用各 user/model 三天平均。這是合成資料的線性外推，未來日期也是預先模擬，不是實測或經驗證的預測，沒有平日／週末季節性模型。
 
-Organization budget 自己的已用／剩餘為 45.20／34.80；carol 為 14／6（限額 20）。不要以 billing 44.88 取代 budget snapshot。USD 80 run-rate 情境為 44.88 ÷ 22 × 30 = **USD 61.20**，`projected_over_budget=false`；其目前餘額 35.12 也不是組織實際剩餘 34.80。欄位契約與 seat 反例見 [資料說明](../data/README.md)。
+Billing coverage 為 2026-08-26～2026-09-22、`sparse_training_samples`，8 月只有不變的 8/31 carol 300 credits／USD 3，且不計入 9 月；缺日未知、不補零。9 月每天有樣本不保證真實組織帳務完整，趨勢應呈現樣本限制，`missing_dates` 有缺日就斷線。28 天 user metrics 是獨立視窗，credits 依原始三天平均 × 28；行為計數不跟著倍增。
+
+原始資料保留小數精度，先加總再顯示兩位小數，並附 `rounding_note`。模型 credits 顯示值相加為 34,906.66、部門金額為 USD 329.13，最多 0.01 的四捨五入差異不能改寫全體 **34,906.67／329.12**；gross credits 減 discount credits 的顯示值也可能差 0.01。
+
+Organization budget 的限額／已用／剩餘為 **600／331.47／268.53**；carol 為 **150／102.67／47.33**，人核准後才是 **220／102.67／117.33**。不要以 billing 329.12 取代 budget snapshot。USD 600 run-rate 情境為 329.12 ÷ 22 × 30 = **USD 448.80**，`projected_over_budget=false`；其目前餘額 600 − 329.12 = 270.88 也不是組織實際剩餘 268.53。欄位契約與 seat 反例見 [資料說明](../data/README.md)。
 
 部門 mapping 是已解析的 cost-center/organizer 歸屬。Teams 可以重疊，不能直接當財務成本中心。無法歸屬的用量保留 `Unallocated`，含 real totals 與已知使用者報表之間的 residual。
 

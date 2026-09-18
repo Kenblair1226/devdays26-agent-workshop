@@ -62,9 +62,9 @@ python -m finops_agent --data-dir data cost
 
 進入 Lab 2 前，建議在啟用的環境中先跑一次 `python -m copilot download-runtime`，把 SDK runtime 下載好。Lab 1 的報表工具不需要這個下載；詳情在 [環境準備](environment-prep.md)。
 
-看到 `net_quantity=4760`、`net_amount=44.88`、`currency=USD`，就表示資料讀進來了。
+看到 `net_quantity=34906.67`、`net_amount=329.12`、`currency=USD`，就表示資料讀進來了。
 
-我們用的是 **`2026-09-22T23:59:59Z`** 的範例快照，所以這裡的 `month_to_date` 固定指 **2026-09-01～2026-09-22（含首尾，共 22 天）**，不是你上課當天。這些都是**合成教學數字**：即使你在 9/22 之前打開，也會看到預先模擬的後續日期；那不是未來的真實觀測，也不是預測或正式 GitHub 帳單。AI credits 更不是原始 token 數。
+我們用的是 **`2026-09-22T23:59:59Z`** 的範例快照，所以這裡的 `month_to_date` 固定指 **2026-09-01～2026-09-22（含首尾，共 22 天）**，不是你上課當天。這些都是**合成教學數字**，以原始三天用量做線性外推：即使你在 9/22 之前打開，也會看到預先模擬的後續日期；那不是實測、經驗證的預測或正式 GitHub 帳單。AI credits 更不是原始 token 數。
 
 ## Lab 1：用 GitHub Copilot 做 FinOps 調查
 
@@ -88,7 +88,7 @@ python -m pytest starter/checks/test_lab1.py -q
 
 這個工具檢查在課程提供的 starter 應該通過。它只能告訴你工具和資料沒問題，Copilot 等一下的回答還是要自己核對。
 
-如果檔案已經存在，換個名字，例如 `python -m finops_agent brief --output workshop-output/lab1-evidence-v2.json`，再跑一次；工具不會覆蓋舊檔。新版分析包的 `schema_version=2`，包含 `daily_usage`。若手上的舊輸出缺少它，請重新產生，接下來的附件與選檔也要改用**新檔名**。`brief` 只是把 mock 資料整理起來，不會呼叫模型、建立變更計畫或修改 seats。
+**更新教材後，請重新產生 evidence，不沿用舊輸出。** 舊檔也可能已有 `schema_version=2`、`daily_usage` 與 9/22 快照，單靠日期或 schema 無法辨識先前錯誤的總額。如果檔案已經存在，換個名字，例如 `python -m finops_agent brief --output workshop-output/lab1-evidence-v3.json`，再跑一次；工具不會覆蓋舊檔。接下來的 Chat 附件與網頁選檔都要改用**新檔名**，並核對全體 34,906.67 credits／USD 329.12。`brief` 只是把 mock 資料整理起來，不會呼叫模型、建立變更計畫或修改 seats。
 
 打開 JSON，可以先認識這幾個 section，不用逐行讀完：
 
@@ -99,13 +99,15 @@ python -m pytest starter/checks/test_lab1.py -q
 | `model_breakdown`、`user_breakdown`、`leading_department_models` | 找出用量集中在哪些人／模型，深入第一名部門 |
 | `seat_inventory`、`optimization_hypotheses` | 閒置疑點、未知 activity、改善假設 |
 | `budget_review` | 各 budget 自己的 consumed、remaining、scope 與 hard stop |
-| `run_rate_scenario` | 給定 USD 80 情境的月末外推；不是實際預算餘額 |
+| `run_rate_scenario` | 給定 USD 600 情境的月末外推；不是實際預算餘額 |
 
-這次把原本的合成月累計重新分配成有高低變化的每日樣本，保留 **4,760 net AI credits / USD 44.88**，不是往真實帳單追加觀測。Billing 宣告的訓練視窗是 **2026-08-26～2026-09-22**，類型為 `sparse_training_samples`；8 月只提供 8/31 的樣本，未提供的日期不是已知的零。9 月雖然每天都有樣本，也不能據此宣稱拿到了真實組織的完整帳務。詳細口徑見 [資料說明](../data/README.md)。
+這次的算法是：原始 **2026-09-01～2026-09-03 的 4,760 net AI credits／USD 44.88，乘上 22 / 3**，得到 **34,906.67 credits／USD 329.12**，不是把三天總數分攤到 22 天。9/1～9/3 的來源資料保留，三天模式共重複 7 個週期到 9/21，9/22 取各 user/model 的三天平均；沒有平日／週末季節性模型。Billing 宣告的訓練視窗是 **2026-08-26～2026-09-22**，類型為 `sparse_training_samples`；8 月只提供 8/31 的 carol 300 credits／USD 3，不變也不計入 9 月。未提供的日期不是已知的零；9 月每天有合成樣本，也不能據此宣稱真實帳務完整。詳細口徑見 [資料說明](../data/README.md)。
+
+查核時記得：原始資料保留小數精度，先加總、再顯示兩位小數。部門／模型／使用者小計各自四捨五入後，可能和全體差 0.01 credit 或 USD 0.01；不能因此把全體 USD 329.12 改成 329.13。`daily_usage` 的每日顯示值在這份資料裡則會恰好加總回全體，兩種檢查要分開。
 
 ### 2. 請 Copilot 找出成本熱點
 
-在 VS Code 開啟 **GitHub Copilot Chat**，選 **Ask** 模式，再把 `workshop-output/lab1-evidence.json` 加進附件或 context。
+在 VS Code 開啟 **GitHub Copilot Chat**，選 **Ask** 模式，再把剛產生的 `workshop-output/lab1-evidence.json` 加進附件或 context；若改用了 `lab1-evidence-v3.json`，就附那份新檔。
 
 只附這份合成資料就夠了，**不要附 `.env`、公司報表或 admin token，也不用整個 repo 都丟進去**。這時 Copilot 是在讀你給它的報表，還沒有接到我們的 SDK harness。
 
@@ -165,7 +167,7 @@ python -m pytest starter/checks/test_lab1.py -q
 
 #### 先限定它能讀什麼、改哪裡
 
-1. 附上剛產生、含 `daily_usage` 的 `workshop-output/lab1-evidence.json`。若你用了 `lab1-evidence-v2.json`，把下面 prompt 的資料檔名一起換掉。
+1. 附上這次重新產生、含 `daily_usage` 的 `workshop-output/lab1-evidence.json`。若你用了 `lab1-evidence-v3.json`，把下面 prompt 的資料檔名一起換掉。舊檔也可能有相同 schema 2 與 9/22 快照，請按新總額核對，不只看日期。
 2. 只允許建立 `workshop-output/finops-dashboard.html`。若已有作品，先選新名字，例如 `finops-dashboard-v2.html`，並更新 prompt；不要覆蓋舊成果。
 3. 可讓 Copilot **唯讀**參考 `starter/src/finops_agent/demo.html` 的樣式；不是拿它當資料來源，也不是複製管理者功能。
 4. 檢視 Copilot 提議的 edits 與工具操作，再接受變更。若提議改 repo source、`.env`、安裝套件或開 server，先拒絕，請它回到單一 HTML 的範圍。先看過檔案，再由你手動開啟；不要自動執行或上傳生成結果。
@@ -184,11 +186,12 @@ python -m pytest starter/checks/test_lab1.py -q
 資料載入與錯誤：
 - 頁面初始顯示空白狀態說明和有 label 的 JSON 選檔 input，先不要顯示數字或假圖。用瀏覽器 File API 讀取使用者選的檔案，再 JSON.parse；讓 file:// 直接開啟也能用，不靠 fetch 或 server。
 - 驗證 schema_version=2、必備 section／欄位／型別、有限數值、日期範圍與 as_of 一致性；daily_usage.items 日期須唯一且排序。資料缺漏、格式錯誤、舊版缺 daily_usage 或加總不一致時，清掉舊圖與數字，顯示可讀的錯誤和重新產生 evidence 的建議，不能補成零。
-- daily_usage.items 的 net_quantity 與 net_amount 必須分別加總核對 cost_summary；金額以 cents 檢核，避免浮點誤差。核對 items 與 missing_dates 是否符合 period，不自己補觀測。
+- daily_usage.items 的 net_quantity 與 net_amount 必須分別加總核對 cost_summary；用百分之一 credit 與 cents 的整數表示檢核，避免浮點誤差。本資料每日顯示值恰好對回全體。核對 items 與 missing_dates 是否符合 period，不自己補觀測。
+- 原始資料先加總再顯示兩位小數；部門／模型／使用者小計與 gross-minus-discount 的跨維度檢核，容許本資料最多 0.01 credit 或 USD 0.01 的獨立四捨五入差異，超出才報錯。保留 rounding_note，不改寫 cost_summary 湊小計，不把這個差異誤報為加總不一致。
 - 所有來自 JSON 的文字（含名稱、source、limitations、錯誤內容）都以 textContent 呈現，不使用 innerHTML 或當成程式執行。選檔、切換與排序支援鍵盤、可見焦點；錯誤用 role=alert。每張圖都附可閱讀的資料表和清楚的單位。
 
 畫面：
-1. 醒目標示「Synthetic data／合成教學資料」、snapshot、固定 MTD 起訖、currency=USD、unit=AI credits、source、coverage、limitations。日期可能是預先模擬的未來日期，不是預測、即時使用量、真實帳單或原始 tokens。
+1. 醒目標示「Synthetic data／合成教學資料」、snapshot、固定 MTD 起訖、currency=USD、unit=AI credits、source、coverage、limitations 和 rounding_note。說明這是原始三天用量乘上 22 / 3 的線性外推；日期可能是預先模擬的未來日期，不是實測、經驗證的預測、即時使用量、真實帳單或原始 tokens。
 2. cost_summary 提供 net AI credits 與 net USD 兩張 KPI；金額與 credits 永遠分開，不相加、不互換。
 3. 每日趨勢只讀 daily_usage.items，依 date 畫 net_amount 或 net_quantity，提供單位切換與同資料表。只畫提供的樣本；missing_dates 應標成未知並斷線，不補零或插值。顯示 daily_samples 與 sparse_training_samples 的限制。
 4. 部門排行讀 department_ranking.ranking，模型排行讀 model_breakdown.items；保留 Unallocated 與所有資料列，可依提供的 net credits／金額欄位排序。不要從日彙總臆造「依部門／模型篩選每日趨勢」；排序或單位切換不能改全體 KPI、期間或加總。
@@ -202,28 +205,30 @@ python -m pytest starter/checks/test_lab1.py -q
 
 接受前，先看 diff：是否只有指定的 HTML？有沒有外連、讀取認證或帶入管理者功能？確認後，從檔案總管雙擊 `workshop-output/finops-dashboard.html`，或把這個檔案拖進瀏覽器。**不需要 `npm install`、啟動 server 或調整 CORS**。
 
-應先看到選檔說明。用頁面的選檔鈕載入**新版** evidence JSON，而不是期待網頁自己找相對路徑。檔案只留在此頁記憶體；重新整理後再選一次即可。
+應先看到選檔說明。用頁面的選檔鈕載入**這次重新產生的** evidence JSON，例如 `lab1-evidence-v3.json`，而不是期待網頁自己找相對路徑。舊檔的 schema 與 snapshot 可能相同，所以仍要對下面的答案。檔案只留在此頁記憶體；重新整理後再選一次即可。
 
 | 要核對什麼 | 這份 mock evidence 的答案 |
 | --- | --- |
 | Snapshot／MTD | `2026-09-22T23:59:59Z`；2026-09-01～2026-09-22 |
-| 全體 KPI／每日樣本加總 | 4,760 net AI credits／USD 44.88 |
-| AI Lab／Unallocated | 2,400 credits／USD 26；90 credits／USD 0.54 |
+| 全體 KPI／每日樣本加總 | 34,906.67 net AI credits／USD 329.12 |
+| AI Lab／Unallocated | 17,600 credits／USD 190.67；660 credits／USD 3.96 |
+| 模型小計的顯示誤差 | 模型 credits 相加為 34,906.66，與全體差 0.01；部門 USD 相加為 329.13，不改全體 329.12 |
 | 每日趨勢 | 22 個 9 月日期，最後是 9/22；`missing_dates=[]`，每天有樣本不代表真實帳務完整 |
-| Organization budget（獨立快照） | 限額 80、已用 45.20、剩餘 34.80；不是 billing 的 44.88 |
-| carol budget（尚未進 Lab 2 核准） | 限額 20、已用 14、剩餘 6 |
-| Run-rate 情境（不是實際預算） | 44.88 ÷ 22 × 30 = USD 61.20；`projected_over_budget=false`，情境目前餘額 35.12 不是 org 的 34.80 |
+| Organization budget（獨立快照） | 限額 600、已用 331.47、剩餘 268.53；不是 billing 的 329.12 |
+| carol budget（尚未進 Lab 2 核准） | 限額 150、已用 102.67、剩餘 47.33 |
+| Run-rate 情境（不是實際預算） | 329.12 ÷ 22 × 30 = USD 448.80；`projected_over_budget=false`，情境目前餘額 600 − 329.12 = 270.88，不是 org 的 268.53 |
 
-切換 credits／USD、切換排行排序後，再核對一次全體總數。也檢查空白狀態與錯誤處理：若選到損壞 JSON 或缺 `daily_usage` 的舊 evidence，應顯示錯誤，而不是一張全零或沿用舊數字的圖。舊版請用新檔名重新產生，並在 Chat 與網頁都換成新檔。
+切換 credits／USD、切換排行排序後，再核對一次全體總數。也檢查空白狀態與錯誤處理：若選到損壞 JSON 或缺 `daily_usage` 的舊 evidence，應顯示錯誤，而不是一張全零或沿用舊數字的圖；上述 0.01 四捨五入差異則不應報錯。即使舊檔通過 schema／日期檢查，也請用新檔名重新產生，並在 Chat 與網頁都換成新檔。
 
 有差異時，可以接著貼這段；仍只允許改剛才指定的 HTML：
 
 ```text
-請用我附的新版 mock evidence 檢查剛才的 dashboard，只修正指定 HTML，先列出差異的 JSON 欄位與原因，不修改或捏造資料，也不自動執行或上傳。
-這份資料應加總為 4760 credits／44.88 USD，AI Lab 2400／26，Unallocated 90／0.54；daily_usage 應有 22 個 9 月日期並在 2026-09-22 結束。
-確認 organization budget 仍是 consumed 45.20／remaining 34.80，carol 是 consumed 14／limit 20／remaining 6，沒有被 billing 或 forecast 覆蓋。
+請用我這次重新產生並附上的 mock evidence 檢查剛才的 dashboard，只修正指定 HTML，先列出差異的 JSON 欄位與原因，不修改或捏造資料，也不自動執行或上傳。
+全體和 daily_usage 應分別加總為 34906.67 credits／329.12 USD，AI Lab 17600／190.67，Unallocated 660／3.96；daily_usage 應有 22 個 9 月日期並在 2026-09-22 結束。
+跨部門／模型／使用者小計與 gross-minus-discount 要保留原始精度及 rounding_note；本資料的 0.01 credit 或 USD 0.01 四捨五入差異不應報錯。模型 credits 顯示值相加為 34906.66、部門 USD 為 329.13，都不能拿來改寫全體 KPI。
+確認 organization budget 仍是 limit 600／consumed 331.47／remaining 268.53，carol 是 consumed 102.67／limit 150／remaining 47.33，沒有被 billing 或 forecast 覆蓋。USD 600 的 run-rate 為 448.80、情境餘額 270.88，另區顯示。
 確認排序／單位切換不改總數，也沒有臆造部門或模型的每日篩選。
-修正損壞 JSON、缺 daily_usage、缺欄位與不一致加總的錯誤提示；缺日期標未知並斷線，不補零。舊 evidence 必須提示用新檔名重新產生。
+修正損壞 JSON、缺 daily_usage、缺欄位與超出容差的不一致加總的錯誤提示；缺日期標未知並斷線，不補零。舊 evidence 必須提示用新檔名重新產生；相同 schema 2 與 9/22 日期不能證明是更新後的檔案。
 ```
 
 圖畫得漂亮只是第一步，**數字能對回證據、限制說得清楚**，才是這個選做練習的重點。如果 Agent 模式不可用，或頁面還需要調整，保留決策摘要、先進 Lab 2 就好。
@@ -264,7 +269,7 @@ bash 也是同一個命令。終端會出現兩個 `http://127.0.0.1:8098/` 連�
 
 User 由使用者操作，Admin 由管理者保管。**不要把 admin link 交給使用者或截圖分享**；持有它就能操作這次 demo 的管理者功能。重啟後，舊連結就不能用了。如果 port 被占用，改跑 `python -m finops_agent demo --port 8099`。
 
-先看一下 User 頁面：carol 本期應該用了 **1,400 net AI credits / USD 14**，限額 **USD 20**、已用 **14**、剩餘 **6**。這裡只看 carol，不是 Lab 1 的全組織金額 44.88；用量仍是範例快照，不是即時帳務。
+先看一下 User 頁面：carol 本期應該用了 **10,266.67 net AI credits / USD 102.67**，限額 **USD 150**、已用 **102.67**、剩餘 **47.33**。這裡只看 carol，不是 Lab 1 的全組織金額 329.12；用量仍是範例快照，不是即時帳務。
 
 ### 3. 先問「我花了多少？」再問「怎麼省？」
 
@@ -280,21 +285,21 @@ User 由使用者操作，Admin 由管理者保管。**不要把 admin link 交�
 
 接著在 User 頁面說：
 
-> 請把我的每月限額提高到 USD 30，理由是下週有 migration 專案。
+> 請把我的每月限額提高到 USD 220，理由是下週有 migration 專案。
 
-模型會呼叫 `request_budget_increase`，畫面出現 **pending（待核准）**。先停一下，看看數字：**限額應該還是 20，剩餘還是 6**。「申請送出」和「已經核准」是兩回事。
+模型會呼叫 `request_budget_increase`，畫面出現 **pending（待核准）**。先停一下，看看數字：**限額應該還是 150，已用 102.67、剩餘 47.33 都不變**。「申請送出」和「已經核准」是兩回事。
 
-現在換管理者操作另一個分頁。確認申請人是 carol、金額是 **20 → 30**，再看一下理由和提交時間。都沒問題後，點 **核准並套用 mock 額度**。這一步必須由人確認，模型不能自己核准。
+現在換管理者操作另一個分頁。確認申請人是 carol、金額是 **150 → 220**，再看一下理由和提交時間。都沒問題後，點 **核准並套用 mock 額度**。這一步必須由人確認，模型不能自己核准。
 
-回到 User 頁面，等它自動更新成 **approved（已核准）**。這時限額應該是 **30**、已用 **14** 不變、剩餘 **16**。再問一次：「我的申請核准了嗎？現在可用額度是多少？」看看 Agent 是否真的重新查了資料，而不是重複剛才的答案。
+回到 User 頁面，等它自動更新成 **approved（已核准）**。這時限額應該是 **220**、已用 **102.67** 不變、剩餘 **117.33**。再問一次：「我的申請核准了嗎？現在可用額度是多少？」看看 Agent 是否真的重新查了資料，而不是重複剛才的答案。
 
 ### 5. 確認整個流程真的跑完了
 
 | 階段 | 限額 | 已用 | 剩餘 | 狀態 |
 | --- | --- | --- | --- | --- |
-| 開始 | 20 | 14 | 6 | 尚未申請 |
-| 使用者申請 | 20 | 14 | 6 | pending |
-| 管理者核准 | 30 | 14 | 16 | approved |
+| 開始 | 150 | 102.67 | 47.33 | 尚未申請 |
+| 使用者申請 | 150 | 102.67 | 47.33 | pending |
+| 管理者核准 | 220 | 102.67 | 117.33 | approved |
 
 **Checkpoint 2：** 對照上表，確認你跑完了「提問 → 建議 → 申請 → 人核准 → 新限額」。管理者頁面的 audit 也應留下核准和執行紀錄。記住這幾條界線：使用者不能存取管理者 API、模型沒有 approve tool，同一筆申請重複核准也不能重複變更。
 
@@ -312,7 +317,7 @@ User 由使用者操作，Admin 由管理者保管。**不要把 admin link 交�
 
 ### 1. 換模型，重跑熟悉的使用者／管理者情境
 
-先在 Lab 2 的終端按 `Ctrl+C` 停止 demo。**重啟會重設 mock 申請、回到限額 20／已用 14／剩餘 6，兩個角色連結也會更新**；這是重啟造成的，不是換模型會修改帳務。
+先在 Lab 2 的終端按 `Ctrl+C` 停止 demo。**重啟會重設 mock 申請、回到限額 150／已用 102.67／剩餘 47.33，兩個角色連結也會更新**；這是重啟造成的，不是換模型會修改帳務。
 
 下面把主辦方課前提供的 **endpoint** 和 **model deployment name** 填進 `AZURE_OPENAI_ENDPOINT`、`MODEL_NAME`。`foundry-identity` 在本機使用你已登入、已授權的開發者身分，`AZURE_OPENAI_API_KEY` 可以留空；部署後才使用 Managed Identity。若主辦方採 API key，改照 [Foundry Model 認證方式](environment-prep.md#lab-3-foundry-model-課前準備) 的三個 `.env` 變數設定即可。
 
@@ -342,12 +347,12 @@ python -m finops_agent demo
 
 1. User 問：「我目前花費多少？額度還剩多少？」
 2. User 問：「有什麼節省 AI credits 的建議？」
-3. User 說：「請提高到 USD 30，理由是下週有 migration 專案。」
-4. 確認仍是 **pending、限額 20**，再由 Admin 核准，看到 **限額 30、已用 14、剩餘 16**。
+3. User 說：「請提高到 USD 220，理由是下週有 migration 專案。」
+4. 確認仍是 **pending、限額 150、已用 102.67、剩餘 47.33**，再由 Admin 核准，看到 **限額 220、已用 102.67 不變、剩餘 117.33**。
 
 回答的措辭可以不同，但 evidence、工具權限與核准規則不能變。模型不能自己 approve，也不能把 carol 變成管理者。看見卡片還不夠：它們本來就能從 mock 資料讀出來，要有**經 SDK 聊天得到的回覆**，才算完成模型切換；不要把備援表單當成模型呼叫成功。
 
-記得分清楚兩筆帳：畫面上的 GitHub Copilot credits／budget 是**被分析的合成資料**；Agent 呼叫 Foundry Model 產生的 inference 費用由 Azure 計費。把 carol 的 budget 提到 30，不會調整 Azure quota 或限制 Azure 費用，也不能據此宣稱換模型比較省。
+記得分清楚兩筆帳：畫面上的 GitHub Copilot credits／budget 是**被分析的合成資料**；Agent 呼叫 Foundry Model 產生的 inference 費用由 Azure 計費。把 carol 的 budget 提到 220，不會調整 Azure quota 或限制 Azure 費用，也不能據此宣稱換模型比較省。
 
 如果 Foundry 模型或權限不通，不要反覆重試。看講師預備的 demo，或停止程序後改回 `FINOPS_MODEL_PROVIDER=copilot`，確認 `COPILOT_MODEL` 和 `COPILOT_GITHUB_TOKEN` 是原本可用的值，再重新啟動。回到 Copilot 是備案，不算 Foundry Model 已連上。
 

@@ -155,7 +155,7 @@ def _run_approval_demo(
             {
                 "budget_scope": "user",
                 "user": "carol",
-                "budget_amount": 30,
+                "budget_amount": 220,
                 "budget_type": "BundlePricing",
                 "budget_product_sku": "ai_credits",
                 "prevent_further_usage": True,

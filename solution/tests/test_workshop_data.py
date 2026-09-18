@@ -4,7 +4,7 @@ import subprocess
 import sys
 from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 import pytest
@@ -31,7 +31,7 @@ def test_daily_samples_cover_every_day_through_september_22() -> None:
     client = MockGitHubFinOpsClient()
     items = client.get_usage_items()
     september = [item for item in items if item.date >= date(2026, 9, 1)]
-    assert len(september) == 164
+    assert len(september) == 86
     assert {item.date for item in september} == {
         date(2026, 9, 1) + timedelta(days=offset) for offset in range(22)
     }
@@ -44,17 +44,71 @@ def test_daily_samples_cover_every_day_through_september_22() -> None:
             ("discount_quantity", "discount_amount"),
             ("net_quantity", "net_amount"),
         ):
-            assert Decimal(str(getattr(item, quantity))) * price == Decimal(
+            difference = Decimal(str(getattr(item, quantity))) * price - Decimal(
                 str(getattr(item, amount))
             )
+            assert abs(difference) <= Decimal("0.00000001")
     by_day = defaultdict(Decimal)
     for item in september:
         by_day[item.date] += Decimal(str(item.net_amount))
-    assert sum(by_day.values()) == Decimal("44.88")
-    assert len(set(by_day.values())) >= 10
-    weekends = [value for day, value in by_day.items() if day.weekday() >= 5]
-    weekdays = [value for day, value in by_day.items() if day.weekday() < 5]
-    assert sum(weekends) / len(weekends) < sum(weekdays) / len(weekdays)
+    assert sum(by_day.values()).quantize(Decimal(".01")) == Decimal("329.12")
+    for day in range(1, 22):
+        assert by_day[date(2026, 9, day)] == by_day[date(2026, 9, (day - 1) % 3 + 1)]
+    assert by_day[date(2026, 9, 22)].quantize(Decimal(".01")) == Decimal("14.96")
+
+
+def test_original_three_day_totals_are_scaled_by_twenty_two_over_three() -> None:
+    tools = FinOpsToolbox(MockGitHubFinOpsClient())
+    baseline = tools.get_cost_summary("custom", "2026-09-01", "2026-09-03")
+    current = tools.get_cost_summary()
+    original = {
+        "gross_quantity": 4900,
+        "discount_quantity": 140,
+        "net_quantity": 4760,
+        "gross_amount": 46.32,
+        "discount_amount": 1.44,
+        "net_amount": 44.88,
+    }
+    for field, expected in original.items():
+        assert baseline[field] == expected
+        scaled = (Decimal(str(expected)) * 22 / 3).quantize(
+            Decimal(".01"), ROUND_HALF_UP
+        )
+        assert Decimal(str(current[field])) == scaled
+    assert current["net_quantity"] == 34906.67
+    assert current["net_amount"] == 329.12
+    assert current["record_count"] == 86
+
+
+@pytest.mark.parametrize("dimension", ["user", "model"])
+def test_every_user_and_model_is_scaled_without_rounding_early(dimension) -> None:
+    records = MockGitHubFinOpsClient().get_usage_items()
+    baseline = defaultdict(lambda: defaultdict(Decimal))
+    extended = defaultdict(lambda: defaultdict(Decimal))
+    for item in records:
+        if item.date < date(2026, 9, 1):
+            continue
+        key = getattr(item, dimension)
+        for field in (
+            "gross_quantity",
+            "discount_quantity",
+            "net_quantity",
+            "gross_amount",
+            "discount_amount",
+            "net_amount",
+        ):
+            value = Decimal(str(getattr(item, field)))
+            extended[key][field] += value
+            if item.date <= date(2026, 9, 3):
+                baseline[key][field] += value
+    assert baseline.keys() == extended.keys()
+    for key, fields in baseline.items():
+        for field, value in fields.items():
+            assert abs(extended[key][field] - value * 22 / 3) <= Decimal("0.0000001"), (
+                dimension,
+                key,
+                field,
+            )
 
 
 def test_all_snapshot_dates_and_relative_activity_are_consistent() -> None:
@@ -77,7 +131,7 @@ def test_all_snapshot_dates_and_relative_activity_are_consistent() -> None:
             for item in client.get_usage_items()
             if item.user == "ivan" and item.date.month == 9
         )
-        == 90
+        == 660
     )
     for metric in client.get_user_metrics():
         assert 0 <= metric.total_active_days <= 28
@@ -87,8 +141,13 @@ def test_all_snapshot_dates_and_relative_activity_are_consistent() -> None:
             ) <= datetime.fromisoformat(snapshot)
     profile = FinOpsToolbox(client).break_down_usage("user")
     carol = next(item for item in profile["items"] if item["user"] == "carol")
-    assert carol["net_quantity"] == 1400
-    assert carol["net_amount"] == 14
+    assert carol["net_quantity"] == 10266.67
+    assert carol["net_amount"] == 102.67
+    carol_metric = next(
+        metric for metric in client.get_user_metrics() if metric.user == "carol"
+    )
+    assert carol_metric.ai_credits_used == 13066.67
+    assert carol_metric.total_active_days == 22
 
 
 def test_fixture_generator_is_current_and_read_only_in_check_mode() -> None:
@@ -147,8 +206,13 @@ def test_regeneration_preserves_staleness_and_is_idempotent(
     assert generator.SNAPSHOT == datetime(2026, 9, 22, 23, 59, 59, tzinfo=UTC)
 
 
-@pytest.mark.parametrize("quantity", [0, 5, 40, 100, 1400])
-def test_allocation_preserves_exact_synthetic_totals(generator, quantity) -> None:
-    values = generator._allocate(quantity, [5, 1, 4, 2])
-    assert sum(values) == quantity
-    assert all(value >= 0 and value % 5 == 0 for value in values)
+def test_partial_cycle_keeps_fractional_credits_and_balanced_rows(generator) -> None:
+    report = generator.build_usage_report()
+    last_day = [row for row in report["usage_items"] if row["date"] == "2026-09-22"]
+    assert len(last_day) == 9
+    assert any(not row["net_quantity"].is_integer() for row in last_day)
+    for row in last_day:
+        for unit in ("quantity", "amount"):
+            assert Decimal(str(row[f"gross_{unit}"])) - Decimal(
+                str(row[f"discount_{unit}"])
+            ) == Decimal(str(row[f"net_{unit}"]))

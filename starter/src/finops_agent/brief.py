@@ -31,13 +31,15 @@ def build_analysis_brief(toolbox: FinOpsToolbox) -> dict[str, Any]:
         "seat_inventory": toolbox.list_seats(),
         "budget_review": toolbox.list_budgets(),
         "optimization_hypotheses": toolbox.recommend_optimizations(),
-        "run_rate_scenario": toolbox.forecast_budget(80),
+        "run_rate_scenario": toolbox.forecast_budget(600),
         "analysis_rules": [
             "All evidence is synthetic; do not upload organization data or secrets.",
             "Label each claim with its evidence section, period, unit and freshness.",
             "Daily trends describe supplied samples; missing dates are unknown, "
             "not observed zeros.",
-            "The run-rate amount 80 is a scenario, not an actual budget balance.",
+            "The run-rate amount 600 is a scenario, not an actual budget balance.",
+            "Totals are rounded after aggregation; independently rounded subtotals "
+            "may differ slightly. Do not alter the overall total to hide rounding.",
             "Missing activity or a high usage rank alone does not authorize removal.",
             "Credits are not raw tokens; savings estimates need explicit assumptions.",
             "Human review is required; this brief creates no approvals or writes.",
@@ -78,6 +80,7 @@ def _daily_usage(toolbox: FinOpsToolbox, costs: dict[str, Any]) -> dict[str, Any
                 "granularity",
                 "coverage",
                 "limitations",
+                "rounding_note",
             )
         },
         "items": rows,

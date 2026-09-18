@@ -51,11 +51,11 @@ python -m finops_agent --data-dir data cost
 
 SDK 固定為 `github-copilot-sdk==1.0.11`，由該 SDK 決定 runtime 版本。不要混用任意 PATH 上的 Copilot CLI。若跳過預下載，SDK 首次使用會下載 runtime，可能中斷操作節奏；**不需要獨立啟動 CLI server 或 Docker**。
 
-預期 baseline：MTD net `4760` AI credits、`44.88` USD、snapshot `2026-09-22T23:59:59Z`。MTD 固定為 **2026-09-01～2026-09-22**，22 天皆有變化的合成樣本；即使課程當天還沒到 9/22，後續日期也是預先模擬，不是預測或真實觀測。`starter/tests` 與 `starter/checks/test_lab1.py` 應開箱即通過；只有 Lab 2 checks 在完成 SDK TODO 前會失敗。
+預期 baseline：MTD net `34906.67` AI credits、`329.12` USD、snapshot `2026-09-22T23:59:59Z`。MTD 固定為 **2026-09-01～2026-09-22**；原始 **2026-09-01～2026-09-03** 的 4,760 credits／USD 44.88 乘上 **22 / 3**，不是將三天總額攤到 22 天。來源三天保留，重複三天模式到 9/21，再以各 user/model 三天平均補 9/22。這是合成資料的線性外推，後續日期也是預先模擬，不是實測或經驗證的預測，沒有平日／週末季節性模型。`starter/tests` 與 `starter/checks/test_lab1.py` 應開箱即通過；只有 Lab 2 checks 在完成 SDK TODO 前會失敗。
 
 ## Lab 1 Copilot Chat 準備
 
-在 VS Code 登入有 Copilot 權限的 GitHub 帳號，確認能使用 Chat 的 Ask 模式與附檔。先以 `python -m finops_agent brief --output workshop-output/lab1-evidence.json` 產生分析包，再把該 JSON 作為唯一資料附件。新版應為 `schema_version=2` 且有 `daily_usage`；檔案已存在或是舊版時，改用 `--output workshop-output/lab1-evidence-v2.json`，後續附件與選檔也換成新檔。工具不覆蓋舊分析。
+在 VS Code 登入有 Copilot 權限的 GitHub 帳號，確認能使用 Chat 的 Ask 模式與附檔。先以 `python -m finops_agent brief --output workshop-output/lab1-evidence.json` 產生分析包，再把該 JSON 作為唯一資料附件。**更新後要重新產生 evidence**：舊檔也可能已有 `schema_version=2`、`daily_usage` 與 9/22 快照，不能只靠日期或 schema 判斷。保留舊檔，改用 `--output workshop-output/lab1-evidence-v3.json`，核對全體 34,906.67 credits／USD 329.12，後續附件與選檔也換成新檔。工具不覆蓋舊分析。
 
 這個練習只用課程內建工具，不需 Docker、SSO、資料同步 PAT 或真實 organization。Copilot Chat 不可用時，與已登入的鄰座共看同一份資料或觀摩講師，不分享帳密；報表工具仍可離線運行。
 
@@ -94,7 +94,7 @@ python -m finops_agent ask "目前本月的範例費用是多少？"
 
 ### Lab 2 browser demo
 
-完成 `demo_connection.py` 接線後，在同一 shell 執行 `python -m finops_agent demo`。預設只監聽 `127.0.0.1:8098`，User 與 Admin 連結在 console 顯示；用兩個分頁並排演示。每次啟動是獨立的 carol mock 帳號，限額 20、已用 14、剩餘 6。
+完成 `demo_connection.py` 接線後，在同一 shell 執行 `python -m finops_agent demo`。預設只監聽 `127.0.0.1:8098`，User 與 Admin 連結在 console 顯示；用兩個分頁並排演示。每次啟動是獨立的 carol mock 帳號，限額 150、已用 102.67、剩餘 47.33。申請提高至 220 後先維持 pending 和原額度；人核准後才變成限額 220、已用 102.67、剩餘 117.33。
 
 不用 Node、React build、Docker 或正式登入。已在 Python requirements 內列出 Starlette / Hypercorn。不要用公開 tunnel 或 `0.0.0.0` 將 demo 對外開放；它的角色 capability 只是單機教學邊界，持有 admin link 就代表管理者。重啟會恢復初始資料，舊連結失效。
 
