@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "organization": "octo-demo",
+  "as_of": "2026-09-22T23:59:59Z",
+  "source": "Synthetic fictional workshop evidence: team membership and task plans as of 2026-09-22.",
+  "teams": [
+    {
+      "department": "AI Lab",
+      "members": [
+        "carol",
+        "dave"
+      ],
+      "initiative": "Legacy platform migration",
+      "success_definition": "One migration batch passes regression checks",
+      "deadline": "2026-09-30",
+      "planned_remaining_tasks": [
+        {
+          "user": "carol",
+          "workflow": "migration",
+          "count": 60
+        },
+        {
+          "user": "dave",
+          "workflow": "migration",
+          "count": 30
+        }
+      ]
+    },
+    {
+      "department": "Platform Engineering",
+      "members": [
+        "alice",
+        "bob"
+      ],
+      "initiative": "Platform service maintenance",
+      "success_definition": "One maintenance task or lightweight check passes regression checks",
+      "deadline": null,
+      "planned_remaining_tasks": []
+    },
+    {
+      "department": "Security",
+      "members": [
+        "grace",
+        "heidi"
+      ],
+      "initiative": "Automated pull request review",
+      "success_definition": "One automated review artifact per pull request revision",
+      "deadline": null,
+      "planned_remaining_tasks": []
+    },
+    {
+      "department": "Mobile",
+      "members": [
+        "erin",
+        "frank"
+      ],
+      "initiative": "Mobile application maintenance",
+      "success_definition": "One mobile-assistance task passes acceptance checks",
+      "deadline": null,
+      "planned_remaining_tasks": []
+    }
+  ],
+  "limitations": [
+    "All teams, initiatives, deadlines and task counts are fictional.",
+    "Remaining tasks are plans as of 2026-09-22, not spend approvals or delivery commitments.",
+    "Independent human and compliance reviews are separate from automated review artifacts and are not candidates for removal.",
+    "Users absent from this roster require separate accounting attribution."
+  ]
+}

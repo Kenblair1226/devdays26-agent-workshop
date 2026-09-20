@@ -7,6 +7,7 @@ from typing import Any
 
 from copilot.tools import Tool, ToolInvocation, ToolResult
 
+from .clients import MockGitHubFinOpsClient
 from .tools import FinOpsToolbox
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def build_sdk_tools(toolbox: FinOpsToolbox) -> list[Tool]:
     period_schema = _period_schema(toolbox.client.supported_periods)
-    return [
+    tools = [
         _tool(
             "get_cost_summary",
             "Get gross and net AI-credit cost for a reporting period.",
@@ -55,7 +56,7 @@ def build_sdk_tools(toolbox: FinOpsToolbox) -> list[Tool]:
         ),
         _tool(
             "forecast_budget",
-            "Project month-end spend using the current daily run rate.",
+            "Project month-end net AI credits and cost from the daily run rate.",
             {
                 **period_schema,
                 "properties": {
@@ -131,6 +132,53 @@ def build_sdk_tools(toolbox: FinOpsToolbox) -> list[Tool]:
             lambda _args: toolbox.get_audit_log(),
         ),
     ]
+    if isinstance(toolbox.client, MockGitHubFinOpsClient):
+        no_args = {"type": "object", "properties": {}, "additionalProperties": False}
+        department = {
+            "type": "object",
+            "properties": {"department": {"type": "string", "minLength": 1}},
+            "required": ["department"],
+            "additionalProperties": False,
+        }
+        tools.extend(
+            [
+                _tool(
+                    "get_daily_usage_trend",
+                    "Read daily billing trends and an equal-length comparison period. "
+                    "Growth is a lead, not proof of waste. Mock evidence only.",
+                    no_args,
+                    lambda _args: toolbox.get_daily_usage_trend(),
+                ),
+                _tool(
+                    "get_team_roster",
+                    "Read one team's membership, business goal, success definition "
+                    "and planned workload when relevant to the investigation.",
+                    department,
+                    lambda args: toolbox.get_team_roster(**args),
+                ),
+                _tool(
+                    "get_workflow_evidence",
+                    "Compare successful outcomes, attempts and unit cost for one team. "
+                    "Summaries cover the whole period; run samples may be truncated.",
+                    {
+                        **department,
+                        "properties": {
+                            **department["properties"],
+                            "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+                        },
+                    },
+                    lambda args: toolbox.get_workflow_evidence(**args),
+                ),
+                _tool(
+                    "compare_improvement_options",
+                    "Read conditional deduplication, simple-task model and temporary "
+                    "budget scenarios. Distinguishes savings from headroom; no writes.",
+                    no_args,
+                    lambda _args: toolbox.compare_improvement_options(),
+                ),
+            ]
+        )
+    return tools
 
 
 def _tool(

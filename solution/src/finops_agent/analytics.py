@@ -207,6 +207,34 @@ class FinOpsAnalyzer:
             ),
         }
 
+    def daily_usage(self, period: ReportingPeriod) -> dict[str, Any]:
+        grouped: dict[date, list[UsageItem]] = defaultdict(list)
+        for item in self._records(period):
+            if item.date is None:
+                raise ValueError(
+                    "daily usage is unavailable for aggregate billing data"
+                )
+            grouped[item.date].append(item)
+        days = [
+            period.start + timedelta(days=offset)
+            for offset in range((period.end - period.start).days + 1)
+        ]
+        return {
+            **self._context(),
+            "period": period.as_dict(),
+            "items": [
+                {
+                    "date": day.isoformat(),
+                    "net_quantity": round(
+                        fsum(item.net_quantity for item in records), 2
+                    ),
+                    "net_amount": round(fsum(item.net_amount for item in records), 2),
+                }
+                for day, records in sorted(grouped.items())
+            ],
+            "missing_dates": [day.isoformat() for day in days if day not in grouped],
+        }
+
     def usage_breakdown(
         self,
         period: ReportingPeriod,
@@ -286,8 +314,12 @@ class FinOpsAnalyzer:
             "scenario_only": True,
             "budget_amount": round(budget_amount, 2),
             "consumed_amount": summary["net_amount"],
+            "consumed_quantity": summary["net_quantity"],
             "remaining_amount": round(remaining, 2),
             "projected_month_end_amount": round(projected_amount, 2),
+            "projected_month_end_quantity": round(
+                summary["net_quantity"] / elapsed_days * days_in_month, 2
+            ),
             "projected_over_budget": projected_amount > budget_amount,
             "method": "month-to-date average daily run-rate projection to month end",
             "forecast_note": (

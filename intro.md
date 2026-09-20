@@ -6,16 +6,21 @@
 
 本工作坊以 **GitHub Copilot FinOps agent** 為情境，帶領學員完成 **3 個 Labs**，依核心成果與現場進度安排實作或示範：
 
-1. **Lab 1**：使用現成 FinOps tools 產生合成資料分析包，透過 GitHub Copilot Chat 調查成本、seat 與 budget，交付一頁決策摘要；選做由 Copilot 協助建立網頁 dashboard
+> 本月 AI credits 成長異常。請找出主要原因，預估月底用量，提出兩個改善方案
+
+1. **Lab 1**：GitHub Copilot Chat Agent 使用現成唯讀工具，從每日趨勢到 user/model，再按需查團隊／workflow；交付原因、月底估算與兩個方案的一頁決策摘要，選做網頁 dashboard
 2. **Lab 2（local-only）**：只接上一個 Copilot SDK harness factory，使用者可詢問個人花費與節省建議、申請提高限額，管理者從另一個頁面核准
 3. **Lab 3（optional）**：讓同一個 Copilot SDK harness 改用 Foundry Model，重跑費用查詢與核准情境；完成模型切換且 hosting 就緒後，再選配 direct-code deploy 到 Foundry Agent Service，否則由講師 demo
 
 ### 課程重點
 
 - 了解 `starter/` 如何作為真正的 hands-on learner path
-- 透過成本總覽、seat 使用檢視與預算分析情境，用合成資料比較節省方案
-- 固定快照為 `2026-09-22T23:59:59Z`，MTD 涵蓋 2026-09-01～2026-09-22；原始 2026-09-01～2026-09-03 的 4,760 net AI credits／USD 44.88 乘上 22 / 3，得到 **34,906.67 credits／USD 329.12**。保留三天來源資料，重複三天模式至 9/21，9/22 取各 user/model 三天平均；這是教學用線性外推，不是實測、經驗證的預測或真實帳務，也沒有平日／週末季節性模型
-- 先用 Copilot Chat 的 Ask 模式分析；完成摘要後，可選用 Agent 模式把同一份 evidence 做成單一 HTML，練習「圖表也要對得回證據」
+- 先讓觀眾選值得追查的團隊，再用工作量、不同成功成果與每成果成本檢驗假設；高用量不等於浪費，Unallocated 保留在總額但不是主角
+- 固定快照為 `2026-09-22T23:59:59Z`，MTD 涵蓋 2026-09-01～2026-09-22：**34,906.67 credits／USD 329.12**。全部預先模擬，不是實測或真實帳務，也不支持季節性推論
+- 在 VS Code 開啟 repo 根目錄，以 Agent 模式使用本專案的 [`/finops-investigation`](.github/skills/finops-investigation/SKILL.md)；工具目錄與長指令由 skill 提供，不先附整份答案。無須全域安裝；skill 不是 IDE 權限沙箱，也不啟用 Python SDK skills
+- `trend` 的 2026-08-01～2026-08-22 比較資料是獨立合成 fixture，普通 billing `previous_month` 不支援；同為 22 日的兩期成長 62.18% credits／74.83% USD，不是完整月帳單
+- 調查後才讀 `options`，從修正重複觸發、簡單任務換模型、暫時提高預算中**選兩個**；比較 owner、品質 gate、同期間效果與不選理由，headroom 不是節省。`forecast 600` 的 47,600 credits／USD 448.80 是歷史 run-rate，不是保證
+- 完成摘要後才匯出調查 evidence，選做由 Agent 建立單一 HTML，練習「圖表也要對得回證據」
 - 練習 human-in-the-loop mock governance boundary
 - 了解 official Foundry direct-code shape：`azure.yaml` + `main.py` + `InvocationAgentServerHost`
 - Foundry 擴充只加入模型來源切換，不增加 Toolbox 或其他服務；工具與核准流程維持不變
@@ -28,8 +33,10 @@
 - Lab 2 在 `starter/` 接線；Lab 1 的摘要與選做作品放在 `workshop-output/`。`solution/` 用來比對，`scripts/checkpoint.py` 提供有備份的 recovery
 - 建議課前先在 `starter/.venv` 安裝 `starter/requirements.txt`，並預先執行 `python -m copilot download-runtime`
 - Lab 1 的現成工具無需認證；Copilot Chat 分析需在 VS Code 登入有 Copilot 權限的 GitHub 帳號，不需 SDK token 或 Azure 資源
-- Lab 1 選做 dashboard 沿用同一個 Copilot 登入；檢視變更後只建立 `workshop-output/finops-dashboard.html`，瀏覽器以 File API 選取重新產生的 `schema_version=2` evidence，不新增依賴、server 或 API key。舊檔也可能有相同 schema 與 9/22 快照，請另存 `workshop-output/lab1-evidence-v3.json` 並載入新檔，不覆蓋舊成果
+- Lab 1 完成決策後用 `brief --include-investigation` 匯出 evidence；一般 `brief` 不預載團隊脈絡，輸出已存在就換新名稱
+- 選做 [`/finops-dashboard`](.github/skills/finops-dashboard/SKILL.md) 沿用 Copilot 登入與 Clawpilot 樣式；檢視後只建立 `workshop-output/finops-dashboard.html`，以 File API 載入 evidence，不新增依賴、CDN、網路、server 或管理操作
 - Lab 2 的頁面與 mock 核准可在本機執行；**SDK 聊天需要 `COPILOT_GITHUB_TOKEN` 或 organizer BYOK**，不需正式 org 權限或 SSO
+- Lab 2 只有 `get_my_costs`、`get_my_savings`、`request_budget_increase` 三個個人工具，不提供組織 roster／workflow 或模型核准。用 carol 的 migration 理由演練 150／102.67／47.33 → 人核准後 220／102.67／117.33；+70 headroom 不是成本下降，mock expiry 不代表自動回復
 - Lab 3 優先使用主辦單位預配置的 Foundry model 與 Managed Identity，且 `starter/azure.yaml` 需要 **azd >= 1.27.1**
 - 不要使用 admin / billing token
 
@@ -60,7 +67,9 @@
 
 This workshop has exactly three labs. Progress through the core outcomes, with optional work guided by learner readiness and available environments:
 
-1. **Lab 1**: use ready-made local tools and GitHub Copilot Chat to investigate synthetic cost, seat, and budget data and produce a one-page decision brief; optionally ask Copilot to help build a local web dashboard
+> This month's AI credits have grown unexpectedly. Find the main causes, estimate month-end usage, and propose two improvements.
+
+1. **Lab 1**: Copilot Chat Agent uses ready-made read-only tools, moving from daily trends to user/model distribution and on-demand team/workflow evidence; produce a one-page cause, forecast, and two-option decision brief, with an optional local dashboard
 2. **Lab 2 (local-only)**: connect one Copilot SDK harness factory; a user asks about spending and savings, requests a higher limit, and an administrator approves on a separate page
 3. **Lab 3 (optional)**: switch the same Copilot SDK harness to a Foundry model and repeat the cost/approval flow; proceed with direct-code hosting when prepared, or watch the instructor demo
 
@@ -68,12 +77,16 @@ This workshop has exactly three labs. Progress through the core outcomes, with o
 
 - `starter/` is the learner path
 - `solution/` is the answer / recovery path
-- Explore cost visibility, seat review, attribution, budgets, and conditional savings estimates with synthetic data; no additional platform installation required
-- The fixed snapshot is `2026-09-22T23:59:59Z`, with MTD covering September 1–22. The original September 1–3 baseline of 4,760 net AI credits / USD 44.88 is multiplied by 22 / 3, giving **34,906.67 credits / USD 329.12**. Preserve those source rows, repeat the three-day pattern through September 21, then use each user/model's three-day average for September 22. This is a synthetic linear extrapolation for teaching, not measured usage, a validated forecast, or real account data; no weekday/weekend seasonality is modeled
-- Use Copilot Chat in Ask mode for analysis, then optionally use Agent mode to create one self-contained HTML dashboard from the same evidence. Review edits and restrict them to `workshop-output/finops-dashboard.html`; do not modify source or `.env`, or automatically execute or upload generated output
-- The optional page loads freshly regenerated `schema_version=2` evidence through a browser File API picker, with no new dependencies, server, CDN, API keys, or browser network calls. Old files can have the same schema and September 22 snapshot but incorrect totals: generate and load a new file such as `workshop-output/lab1-evidence-v3.json`, without overwriting earlier work. It reuses existing Copilot authentication for file creation, not for running the page; the decision brief remains Checkpoint 1
+- Let the audience choose which team to investigate, then check workload, distinct successful outcomes, and cost per outcome before calling high usage waste. Preserve Unallocated in accounting totals without making it the main plot; no mandatory seat removal
+- The fixed snapshot is `2026-09-22T23:59:59Z`, with MTD covering September 1–22: **34,906.67 credits / USD 329.12**. All data is pre-simulated, not measured usage or real account data, and does not establish seasonality
+- Open the repository root in VS Code and use the project-local [`/finops-investigation`](.github/skills/finops-investigation/SKILL.md) in Agent mode. The skill supplies the detailed instructions and tool catalog; do not attach the answer package upfront. No global installation is needed. Skills are not permission sandboxes and do not enable skills in the Python SDK runtime
+- The August 1–22 matched comparison is a separate fictional fixture; ordinary billing `previous_month` remains unsupported. Both periods cover 22 calendar days; growth is 62.18% in credits and 74.83% in USD, not a full-month invoice
+- After investigating workload and outcomes, compare three options: deduplicate triggers, switch only eligible simple tasks to a smaller model, or temporarily increase a user's budget. Choose two with an owner, quality gate, measurable follow-up, and one rejected alternative. Budget headroom is not savings; 47,600 credits / USD 448.80 is a historical run-rate forecast, not a guarantee
+- Only after the decision, export with `brief --include-investigation`; ordinary `brief` does not eagerly load business context. Choose a new filename if the output already exists
+- Optionally use [`/finops-dashboard`](.github/skills/finops-dashboard/SKILL.md) for a single Clawpilot-themed HTML file, reviewed before opening, that loads evidence through File API. No source/`.env` changes, dependencies, server, CDN, network calls, management actions, or automatic execution/upload. The decision brief remains Checkpoint 1
 - Pre-event setup should install `starter/requirements.txt` into `starter/.venv` and pre-cache `python -m copilot download-runtime`
 - Lab 1 analysis uses signed-in VS Code Copilot Chat; Lab 2 uses the local SDK harness with Copilot auth or organizer BYOK. Neither requires Azure hosting
+- Lab 2 exposes only `get_my_costs`, `get_my_savings`, and `request_budget_increase`, not organization workflow data or approval. Use the migration plan to rehearse 150/102.67/47.33 → human approval → 220/102.67/117.33. The extra USD 70 is headroom, not savings; mock expiry metadata is not an automatic reversion timer
 - Optional Hosted deployment uses `starter/azure.yaml`, `starter/main.py`, and `InvocationAgentServerHost`, and requires **azd >= 1.27.1**; the model-only step runs in the local demo
 - The only new Foundry integration is the model provider; Toolbox and additional services are out of scope. Using a Foundry model locally does not require agent hosting or azd
 

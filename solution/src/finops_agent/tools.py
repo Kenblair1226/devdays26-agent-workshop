@@ -4,7 +4,8 @@ from typing import Any
 
 from .analytics import FinOpsAnalyzer
 from .approvals import ApprovalWorkflow
-from .clients import GitHubFinOpsClient
+from .clients import GitHubFinOpsClient, MockGitHubFinOpsClient
+from .investigation import InvestigationEvidence
 from .models import ActionKind, ReportingPeriod
 from .recommendations import build_recommendations
 
@@ -46,6 +47,33 @@ class FinOpsToolbox:
     ) -> dict[str, Any]:
         resolved = self._resolve_period(period, start=start, end=end)
         return self.analyzer.rank_departments(resolved, limit=limit)
+
+    def get_daily_usage(
+        self,
+        period: str = "month_to_date",
+        start: str | None = None,
+        end: str | None = None,
+    ) -> dict[str, Any]:
+        return self.analyzer.daily_usage(
+            self._resolve_period(period, start=start, end=end)
+        )
+
+    def _investigation(self) -> InvestigationEvidence:
+        if not isinstance(self.client, MockGitHubFinOpsClient):
+            raise ValueError("workshop investigation context is mock-only")
+        return InvestigationEvidence(self.client)
+
+    def get_daily_usage_trend(self) -> dict[str, Any]:
+        return self._investigation().daily_trend(self.analyzer)
+
+    def get_team_roster(self, department: str) -> dict[str, Any]:
+        return self._investigation().team_roster(department)
+
+    def get_workflow_evidence(self, department: str, limit: int = 6) -> dict[str, Any]:
+        return self._investigation().workflow_evidence(department, limit)
+
+    def compare_improvement_options(self) -> dict[str, Any]:
+        return self._investigation().improvement_options()
 
     def break_down_usage(
         self,

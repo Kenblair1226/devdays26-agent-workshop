@@ -44,6 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["model", "user", "department", "product"],
     )
     breakdown.add_argument("--period", default="month_to_date")
+    breakdown.add_argument("--department", help="Drill down into one department.")
 
     forecast = subparsers.add_parser("forecast")
     forecast.add_argument("budget_amount", type=float)
@@ -54,11 +55,33 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("chat", help="Multi-turn chat with human approval commands")
     subparsers.add_parser("seats")
     subparsers.add_parser("budgets")
+    subparsers.add_parser(
+        "trend", help="Read mock daily usage and comparison-period growth"
+    )
+    roster = subparsers.add_parser(
+        "roster", help="Read one mock team's business context"
+    )
+    roster.add_argument("department")
+    workflows = subparsers.add_parser(
+        "workflows", help="Read one team's mock workflow evidence"
+    )
+    workflows.add_argument("department")
+    workflows.add_argument(
+        "--limit", type=int, default=6, help="Run sample size (1-20)."
+    )
+    subparsers.add_parser(
+        "options", help="Compare mock improvement scenarios without writes"
+    )
     demo = subparsers.add_parser("demo", help="Start the local user/admin budget demo")
     demo.add_argument("--port", type=int, default=8098)
     demo.add_argument("--user", default="carol", help="Bound mock user (default carol)")
     brief = subparsers.add_parser(
         "brief", help="Collect mock FinOps evidence for analysis in Copilot Chat"
+    )
+    brief.add_argument(
+        "--include-investigation",
+        action="store_true",
+        help="Include business context and scenarios after the investigation.",
     )
     brief.add_argument(
         "--output",
@@ -93,6 +116,11 @@ def main() -> None:
         return
     if args.command == "brief" and backend != "mock":
         raise ValueError("brief is mock-only; set FINOPS_BACKEND=mock")
+    if (
+        args.command in {"trend", "roster", "workflows", "options"}
+        and backend != "mock"
+    ):
+        raise ValueError("workshop investigation commands are mock-only")
     if backend != "mock" and args.command != "approval-demo" and not args.instructor:
         raise ValueError("real GitHub access requires the --instructor option")
     client = (
@@ -107,7 +135,9 @@ def main() -> None:
     elif args.command == "departments":
         result = toolbox.rank_department_consumption(args.period)
     elif args.command == "breakdown":
-        result = toolbox.break_down_usage(args.dimension, args.period)
+        result = toolbox.break_down_usage(
+            args.dimension, args.period, department=args.department
+        )
     elif args.command == "forecast":
         result = toolbox.forecast_budget(args.budget_amount, args.period)
     elif args.command == "recommend":
@@ -116,10 +146,20 @@ def main() -> None:
         result = toolbox.list_seats()
     elif args.command == "budgets":
         result = toolbox.list_budgets()
+    elif args.command == "trend":
+        result = toolbox.get_daily_usage_trend()
+    elif args.command == "roster":
+        result = toolbox.get_team_roster(args.department)
+    elif args.command == "workflows":
+        result = toolbox.get_workflow_evidence(args.department, args.limit)
+    elif args.command == "options":
+        result = toolbox.compare_improvement_options()
     elif args.command == "brief":
         from .brief import build_analysis_brief
 
-        result = build_analysis_brief(toolbox)
+        result = build_analysis_brief(
+            toolbox, include_investigation=args.include_investigation
+        )
         if args.output is not None:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             with args.output.open("x", encoding="utf-8") as handle:

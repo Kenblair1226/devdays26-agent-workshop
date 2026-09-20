@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "organization": "octo-demo",
+  "as_of": "2026-09-22T23:59:59Z",
+  "source": "Synthetic fictional workshop evidence: controlled model experiment for 2026-09-01 through 2026-09-22, separate from organization billing.",
+  "pilots": [
+    {
+      "id": "platform-simple-20",
+      "department": "Platform Engineering",
+      "workflow": "simple-maintenance",
+      "baseline_model": "gpt-5.4",
+      "candidate_model": "gpt-5-mini",
+      "sample_tasks": 20,
+      "baseline_successful_tasks": 20,
+      "candidate_successful_tasks": 20,
+      "baseline_net_amount": 2.0,
+      "candidate_net_amount": 1.2,
+      "currency": "USD",
+      "quality_gate": "Both models passed the same regression checks on the same 20 tasks; all 20 passed for each model. This small synthetic controlled pilot is not production proof.",
+      "limitations": [
+        "The same 20 tasks were evaluated with each model.",
+        "The monetary ratio applies only to representative tasks with equal quality; it is not a raw-token savings claim.",
+        "Any broader model pilot requires its own regression and quality gates before changing production model selection."
+      ]
+    }
+  ],
+  "limitations": [
+    "Fictional controlled experiment, not evidence of production quality.",
+    "Pilot amounts are a separate experiment sample, not additional organization billing, and must never be added to month-to-date usage."
+  ]
+}

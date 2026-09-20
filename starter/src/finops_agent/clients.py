@@ -12,7 +12,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from math import isfinite
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from .models import DepartmentAssignment, ReportingPeriod, UsageItem, UserMetric
 
@@ -93,6 +93,7 @@ class GitHubFinOpsClient(Protocol):
 class MockGitHubFinOpsClient:
     def __init__(self, data_dir: str | Path | None = None) -> None:
         root = Path(data_dir) if data_dir else _default_data_dir()
+        self._data_dir = root
         usage = _read_json(root / "ai-credit-usage.json")
         mappings = _read_json(root / "department-mapping.json")
         seats = _read_json(root / "seats.json")
@@ -256,6 +257,21 @@ class MockGitHubFinOpsClient:
 
     def get_user_metrics(self) -> list[UserMetric]:
         return list(self._user_metrics)
+
+    def get_investigation_fixture(
+        self,
+        name: Literal[
+            "usage-comparison", "team-roster", "workflow-runs", "model-pilots"
+        ],
+    ) -> dict[str, Any]:
+        if name not in {
+            "usage-comparison",
+            "team-roster",
+            "workflow-runs",
+            "model-pilots",
+        }:
+            raise ValueError("unsupported workshop evidence")
+        return _read_json(self._data_dir / f"{name}.json")
 
     def list_seats(self) -> list[dict[str, Any]]:
         return deepcopy(self._seats)

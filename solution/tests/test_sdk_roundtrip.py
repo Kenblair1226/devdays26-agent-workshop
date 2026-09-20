@@ -31,6 +31,7 @@ from finops_agent.tools import FinOpsToolbox
         ),
         ("get_my_costs", {}),
         ("get_my_savings", {}),
+        ("investigation_path", {}),
         ("request_budget_increase", {"new_limit": 220, "reason": "Migration project"}),
         (
             "plan_action",
@@ -53,6 +54,20 @@ def test_real_sdk_calls_finops_tool_without_cloud_credentials(
     monkeypatch, operation, arguments
 ):
     observed = {"requests": 0, "tool_result": None, "tools": []}
+    actions = (
+        [
+            ("get_daily_usage_trend", {}),
+            ("break_down_usage", {"dimension": "model", "department": "AI Lab"}),
+            ("get_team_roster", {"department": "AI Lab"}),
+            ("get_workflow_evidence", {"department": "AI Lab", "limit": 2}),
+            ("get_team_roster", {"department": "Security"}),
+            ("get_workflow_evidence", {"department": "Security", "limit": 2}),
+            ("forecast_budget", {"budget_amount": 600}),
+            ("compare_improvement_options", {}),
+        ]
+        if operation == "investigation_path"
+        else [(operation, arguments)]
+    )
 
     class Model(BaseHTTPRequestHandler):
         def log_message(self, *_):
@@ -70,23 +85,26 @@ def test_real_sdk_calls_finops_tool_without_cloud_credentials(
             results = [m for m in data["messages"] if m["role"] == "tool"]
             if results:
                 observed["tool_result"] = results[-1]["content"]
+                observed["tool_results"] = [row["content"] for row in results]
+            if len(results) == len(actions):
                 message = {
                     "role": "assistant",
                     "content": "FinOps tool result recorded.",
                 }
                 reason = "stop"
             else:
-                name = next(n for n in offered if n.endswith(operation))
+                next_operation, next_arguments = actions[len(results)]
+                name = next(n for n in offered if n.endswith(next_operation))
                 message = {
                     "role": "assistant",
                     "content": None,
                     "tool_calls": [
                         {
-                            "id": "call-finops-1",
+                            "id": f"call-finops-{len(results) + 1}",
                             "type": "function",
                             "function": {
                                 "name": name,
-                                "arguments": json.dumps(arguments),
+                                "arguments": json.dumps(next_arguments),
                             },
                         }
                     ],
@@ -208,6 +226,18 @@ def test_real_sdk_calls_finops_tool_without_cloud_credentials(
                 assert "remaining_amount" in str(observed["tool_result"])
             else:
                 assert "recommendations" in str(observed["tool_result"])
+        elif operation == "investigation_path":
+            assert [name.removeprefix("custom:") for name in harness.tool_calls] == [
+                name for name, _args in actions
+            ]
+            assert len(observed["tool_results"]) == len(actions)
+            assert "0.953333" in str(observed["tool_results"][3])
+            assert "duplicate_success_candidates" in str(observed["tool_results"][5])
+            assert "47600" in str(observed["tool_results"][6])
+            assert "temporary_budget" in str(observed["tool_results"][7])
+            assert toolbox.list_action_plans() == []
+            assert toolbox.get_audit_log()["events"] == []
+            assert toolbox.list_budgets()["budgets"][1]["budget_amount"] == 150
         elif operation == "rank_department_consumption":
             assert "AI Lab" in str(observed["tool_result"])
             assert "17600" in str(observed["tool_result"])

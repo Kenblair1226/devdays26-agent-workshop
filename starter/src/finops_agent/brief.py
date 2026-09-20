@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import Any
 
 from .clients import MockGitHubFinOpsClient
 from .tools import FinOpsToolbox
 
 
-def build_analysis_brief(toolbox: FinOpsToolbox) -> dict[str, Any]:
+def build_analysis_brief(
+    toolbox: FinOpsToolbox, *, include_investigation: bool = False
+) -> dict[str, Any]:
     """Collect read-only evidence for the Lab 1 Copilot Chat investigation."""
     if not isinstance(toolbox.client, MockGitHubFinOpsClient):
         raise ValueError("The workshop analysis brief supports only the mock backend")
@@ -15,13 +16,13 @@ def build_analysis_brief(toolbox: FinOpsToolbox) -> dict[str, Any]:
     costs = toolbox.get_cost_summary()
     departments = toolbox.rank_department_consumption(limit=50)
     leading_department = departments["ranking"][0]["department"]
-    return {
+    result = {
         "schema_version": 2,
         "purpose": "Lab 1 evidence for GitHub Copilot Chat; not model-generated advice",
         "backend": "mock",
         "organization": toolbox.client.organization,
         "cost_summary": costs,
-        "daily_usage": _daily_usage(toolbox, costs),
+        "daily_usage": toolbox.get_daily_usage(),
         "department_ranking": departments,
         "model_breakdown": toolbox.break_down_usage("model", limit=50),
         "user_breakdown": toolbox.break_down_usage("user", limit=50),
@@ -45,44 +46,14 @@ def build_analysis_brief(toolbox: FinOpsToolbox) -> dict[str, Any]:
             "Human review is required; this brief creates no approvals or writes.",
         ],
     }
-
-
-def _daily_usage(toolbox: FinOpsToolbox, costs: dict[str, Any]) -> dict[str, Any]:
-    period = toolbox.analyzer.resolve_period()
-    supplied_dates = {
-        item.date
-        for item in toolbox.client.get_usage_items()
-        if item.date is not None and period.contains(item.date)
-    }
-    rows = []
-    for day in sorted(supplied_dates):
-        summary = toolbox.get_cost_summary("custom", day.isoformat(), day.isoformat())
-        rows.append(
-            {
-                "date": day.isoformat(),
-                "net_quantity": summary["net_quantity"],
-                "net_amount": summary["net_amount"],
-            }
-        )
-    days = [
-        period.start + timedelta(days=offset)
-        for offset in range((period.end - period.start).days + 1)
-    ]
-    return {
-        **{
-            field: costs[field]
-            for field in (
-                "period",
-                "as_of",
-                "currency",
-                "unit",
-                "source",
-                "granularity",
-                "coverage",
-                "limitations",
-                "rounding_note",
-            )
-        },
-        "items": rows,
-        "missing_dates": [day.isoformat() for day in days if day not in supplied_dates],
-    }
+    if include_investigation:
+        departments_to_review = ("AI Lab", "Security", "Platform Engineering")
+        result["investigation_evidence"] = {
+            "daily_comparison": toolbox.get_daily_usage_trend(),
+            "teams": [toolbox.get_team_roster(name) for name in departments_to_review],
+            "workflows": [
+                toolbox.get_workflow_evidence(name) for name in departments_to_review
+            ],
+            "options": toolbox.compare_improvement_options(),
+        }
+    return result

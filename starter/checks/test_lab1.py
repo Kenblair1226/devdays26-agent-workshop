@@ -38,3 +38,28 @@ def test_lab1_brief_supports_cost_seat_and_budget_investigation() -> None:
     seats = {seat["user"]: seat for seat in brief["seat_inventory"]["seats"]}
     assert seats["judy"]["last_activity_at"] is None
     assert tools.get_audit_log()["events"] == []
+
+
+def test_lab1_checks_workload_before_choosing_an_improvement() -> None:
+    tools = FinOpsToolbox(MockGitHubFinOpsClient())
+    trend = tools.get_daily_usage_trend()
+    assert trend["change"]["credits_percent"] == 62.18
+    migration = tools.get_workflow_evidence("AI Lab")
+    assert migration["current"]["summary"]["successful_tasks"] == 200
+    assert migration["baseline"]["summary"]["successful_tasks"] == 80
+    assert (
+        migration["current"]["summary"]["cost_per_successful_task_usd"]
+        == migration["baseline"]["summary"]["cost_per_successful_task_usd"]
+    )
+    review = tools.get_workflow_evidence("Security")
+    assert review["current"]["summary"]["successful_tasks"] == 30
+    assert review["current"]["summary"]["duplicate_success_candidates"] == 30
+    options = tools.compare_improvement_options()
+    assert {option["id"] for option in options["options"]} == {
+        "deduplicate_triggers",
+        "simple_task_model",
+        "temporary_budget",
+    }
+    assert tools.forecast_budget(600)["projected_month_end_quantity"] == 47600
+    assert tools.list_action_plans() == []
+    assert tools.get_audit_log()["events"] == []
