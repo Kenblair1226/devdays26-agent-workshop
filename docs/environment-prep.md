@@ -1,6 +1,6 @@
 # 環境準備與課前檢查
 
-學員約 40 人。**課前完成安裝與認證**，讓現場可以專心實作。課程的主線為現成工具 + Copilot Chat Agent 逐步調查、本機 Copilot SDK harness、Foundry Model 切換及原有的選配部署。不加入 Toolbox、檢索或新的觀測服務。
+學員約 40 人。**課前完成安裝與認證**，讓現場可以專心實作。課程依序進行用量調查、本機額度申請與人工核准；Foundry 模型切換及 Hosted 部署為選配項目。不加入 Toolbox、檢索或新的觀測服務。
 
 ## 學員必要環境
 
@@ -134,9 +134,9 @@ Lab 3 的 identity 路線使用 `FINOPS_MODEL_PROVIDER=foundry-identity`、`AZUR
 
 `AZURE_OPENAI_ENDPOINT` 接受 HTTPS 資源根網址（例如 `https://<resource>.openai.azure.com`）、Foundry project 根 endpoint（`https://<account>.services.ai.azure.com/api/projects/<project>`），或上述網址的 `/openai/v1/` base URL。不要填 `/responses`、`/chat/completions`、deployment 路徑或 Hosted Agent invoke endpoint，也不要在 URL 放 key 或 query string。
 
-Hosted 部署時，`azure.yaml` 會把 azd 的 `AZURE_AI_MODEL_DEPLOYMENT_NAME` 對應到應用程式的 `MODEL_NAME`；這個 azd 來源變數維持原名。若未另設 `AZURE_OPENAI_ENDPOINT`，harness 仍可使用平台注入的 `FOUNDRY_PROJECT_ENDPOINT`，不用為了改 `.env` 命名而重建環境。
+Hosted 部署時，`azure.yaml` 會把 azd 的 `AZURE_AI_MODEL_DEPLOYMENT_NAME` 對應到應用程式的 `MODEL_NAME`。若未另設 `AZURE_OPENAI_ENDPOINT`，harness 可使用平台注入的 `FOUNDRY_PROJECT_ENDPOINT`。
 
-舊 `.env` 的 `FOUNDRY_MODEL_URL`／`FOUNDRY_API_KEY`／`COPILOT_MODEL` 完整組合仍可相容讀取，並顯示遷移提醒；新 key 設定優先，請整組改用新名稱，不要混用新 endpoint 與舊 key。Identity 路線保留平台 endpoint／舊 deployment 變數的相容來源。範例與課程命令一律使用新名稱。
+第一次設定請直接使用本節提供的變數名稱。若出現「舊 Foundry 設定遷移提醒」，再依[疑難排解](troubleshooting.md)更新既有設定；請勿混用新 endpoint 與舊 key。
 
 使用 identity 的學員需課前自行登入 Azure CLI 等受支援的開發者憑證來源，由主辦方核對 inference 權限；**有 portal 閱讀權限不代表能呼叫模型**。課程程式不會替學員執行登入或建立 role assignment。若政策要求禁用 keys，就不啟用 key 備案。
 

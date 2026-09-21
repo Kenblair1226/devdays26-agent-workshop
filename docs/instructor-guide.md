@@ -9,7 +9,7 @@
 > /finops-investigation 本月 AI credits 成長異常。請找出主要原因，預估月底用量，提出兩個改善方案
 
 1. 先展示 `trend` 的每日 current／baseline、growth 與 department_changes，再讓 Agent 按線索查 user/model 分布。這些輸出不含 migration／重複 review 的原因。
-2. 停在排行，問全場：「若只能砍一組，你會先砍誰？還缺什麼？」記下猜測，不把投票當執行授權。
+2. 停在排行，問全場：「哪個團隊的用量最值得先了解？目前的資料足以判斷是否浪費嗎？還需要哪些證據？」記下猜測，不把投票當執行授權。
 3. 由學員選團隊，才呼叫 `roster '<部門>'`、`workflows '<部門>' --limit 6`。讓 Agent 短列「可驗證的假設／下一項需要的事實」，不要求私有推理過程，也不固定抄一整串命令。
 4. 要求比較工作量、不同成功成果、同定義單位成本；如果最大團隊的成長被解釋了，再查另一個增長團隊。**取得這些證據後**才揭露下方反轉。
 5. `forecast 600` 回歷史 run-rate；再用 `options` 比較 A／B／C，讓小組選兩個、為不選的方案辯護。最後才匯出 `brief --include-investigation`，可選做單一 HTML dashboard。
@@ -101,7 +101,7 @@ IDE skill 不啟用 Python SDK skills，也不是權限沙箱；仍檢視命令�
 | carol user budget | USD 150、已用 102.67、剩 47.33，使用率約 68.45%，hard stop |
 | organization budget | USD 600、已用 331.47、剩 268.53，使用率約 55.25% |
 
-可追問：「AI Lab 成本大幅增加，但每個成功批次不變，還要砍它嗎？」「Security 的 60 次 success 能算 60 個成果嗎？」「什麼情況下 retry 或另一個模型的 review 是必要的？」「如果今天還沒到 9/22，為什麼已有後續日期？」普通 billing `previous_month` 不支援；獨立比較用 `trend`，不能把 8/31 樣本當完整 baseline。
+可追問：「AI Lab 的總成本增加，但每個成功批次的成本不變；這會如何影響你的建議？」「Security 的 60 次成功執行能算 60 個成果嗎？」「什麼情況下重試或另一個模型的 review 是必要的？」「如果今天還沒到 9/22，為什麼已有後續日期？」普通 billing `previous_month` 不支援；獨立比較用 `trend`，不能把 8/31 樣本當完整 baseline。
 
 關鍵反例：ivan 的 seat activity 是 2026-08-31，距快照 22 天，但 MTD billing 仍有 660 credits；heidi 是 2026-09-13、距快照 9 天；judy 的 activity=null。合理結論應是先核實 telemetry、帳號狀態與業務需求，而不是「全部可回收」。`forecast 600` 算出的 600 − 329.12 = 270.88 是 scenario headroom，不能覆蓋 org budget 自己的 268.53；billing 329.12 也不能取代獨立的 consumed 331.47。
 

@@ -95,6 +95,62 @@ def test_skill_discovery_has_a_simple_manual_fallback() -> None:
         assert f"../.github/skills/{name}/SKILL.md" in text
 
 
+def test_first_time_guidance_does_not_assume_an_earlier_workshop_version() -> None:
+    text = student_guide()
+    assert "skills（給 Copilot 的工作指引）" in text
+    for name in ("student-lab.md", "environment-prep.md", "instructor-guide.md"):
+        content = (ROOT / "docs" / name).read_text(encoding="utf-8")
+        for phrase in ("這次不用貼", "原有的選配部署", "若只能砍一組", "還要砍它嗎"):
+            assert phrase not in content, (name, phrase)
+    preparation = (ROOT / "docs" / "environment-prep.md").read_text(encoding="utf-8")
+    assert "第一次設定請直接使用本節提供的變數名稱" in preparation
+    assert "若出現「舊 Foundry 設定遷移提醒」" in preparation
+    assert "[疑難排解](troubleshooting.md)" in preparation
+    assert "舊 `.env` 的" not in preparation
+
+
+def test_troubleshooting_distinguishes_read_only_investigation_from_saved_outputs() -> (
+    None
+):
+    text = (ROOT / "docs" / "troubleshooting.md").read_text(encoding="utf-8")
+    row = markdown_table_rows(text)[
+        "Copilot Agent 提議安裝依賴、修改 source 或 `.env`"
+    ][0]
+    for required in (
+        "調查階段",
+        "唯讀工具",
+        "不修改原始碼、資料集或設定",
+        "學員確認後",
+        "workshop-output/finops-review.md",
+        "選做 dashboard 時才建立",
+        "workshop-output/finops-dashboard.html",
+        "不覆蓋作品",
+        "不複製 admin／API",
+    ):
+        assert required in row, required
+    assert "不編輯任何檔案" not in row
+
+
+def test_troubleshooting_guides_the_investigation_without_revealing_case_answers() -> (
+    None
+):
+    troubleshooting = (ROOT / "docs" / "troubleshooting.md").read_text("utf-8")
+    instructor = (ROOT / "docs" / "instructor-guide.md").read_text("utf-8")
+    for answer in ("0.953333", "9.63", "5.65", "15.28", "164.27", "20/20"):
+        assert answer not in troubleshooting, answer
+        assert answer in instructor, answer
+    for required in (
+        "工作量、成功成果與單位成本",
+        "同一未來期間",
+        "範圍互不重疊",
+        "品質門檻",
+        "estimated_credit_savings=null",
+        "quality_gate_failed",
+        "增加額度不算節省",
+    ):
+        assert required in troubleshooting, required
+
+
 def test_current_data_is_explained_without_dataset_revision_history() -> None:
     for path in workshop_documents():
         text = path.read_text(encoding="utf-8")
