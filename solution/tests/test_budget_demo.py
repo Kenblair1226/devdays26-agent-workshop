@@ -223,6 +223,16 @@ def test_demo_page_does_not_embed_any_role_capability(app) -> None:
     assert "提高到 USD 30" not in response.text
 
 
+def test_demo_page_renders_assistant_markdown_without_html_injection(app) -> None:
+    with TestClient(app) as client:
+        response = client.get("/")
+    assert response.status_code == 200
+    assert "function markdownBody(text)" in response.text
+    assert 'kind === "assistant"' in response.text
+    assert "document.createTextNode" in response.text
+    assert "innerHTML" not in response.text
+
+
 @pytest.mark.parametrize(
     "error",
     [

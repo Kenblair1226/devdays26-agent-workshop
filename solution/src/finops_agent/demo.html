@@ -248,7 +248,29 @@
     .message.user { margin-left: 24px; background: var(--cp-accent-soft); }
     .message.assistant { margin-right: 16px; }
     .message-name { margin-bottom: 8px; font-size: 0.8125rem; font-weight: 700; color: var(--cp-text-soft); }
-    .message-body, .request-reason { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .message-body, .request-reason { overflow-wrap: anywhere; }
+    .message-body.plain, .request-reason { white-space: pre-wrap; }
+    .message-body.markdown > * { margin: 0; }
+    .message-body.markdown > * + * { margin-top: 12px; }
+    .message-body.markdown ul, .message-body.markdown ol { padding-left: 24px; }
+    .message-body.markdown li + li { margin-top: 6px; }
+    .message-body.markdown code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: var(--cp-surface);
+      font-family: Consolas, "Courier New", Courier, monospace;
+      font-size: 0.9em;
+    }
+    .message-body.markdown pre {
+      max-width: 100%;
+      padding: 12px;
+      overflow: auto;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+      white-space: pre;
+    }
+    .message-body.markdown pre code { padding: 0; background: transparent; }
     .message-tools { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--cp-border); font-family: Consolas, "Courier New", Courier, monospace; font-size: 0.8125rem; color: var(--cp-text-soft); overflow-wrap: anywhere; }
     .form-actions { align-items: center; margin-top: 12px; }
     .form-actions p { flex: 1; min-width: 180px; }
@@ -523,6 +545,100 @@
         if (className) element.className = className;
         return element;
       };
+
+      function appendInlineMarkdown(parent, text) {
+        let position = 0;
+        while (position < text.length) {
+          const codeStart = text.indexOf("`", position);
+          const strongStart = text.indexOf("**", position);
+          const starts = [codeStart, strongStart].filter((index) => index >= 0);
+          const next = starts.length ? Math.min(...starts) : -1;
+          if (next < 0) {
+            parent.append(document.createTextNode(text.slice(position)));
+            return;
+          }
+          if (next > position) {
+            parent.append(document.createTextNode(text.slice(position, next)));
+            position = next;
+          }
+          if (position === codeStart) {
+            const end = text.indexOf("`", position + 1);
+            if (end > position + 1) {
+              parent.append(make("code", text.slice(position + 1, end)));
+              position = end + 1;
+              continue;
+            }
+            parent.append(document.createTextNode("`"));
+            position += 1;
+            continue;
+          }
+          const end = text.indexOf("**", position + 2);
+          if (end > position + 2) {
+            parent.append(make("strong", text.slice(position + 2, end)));
+            position = end + 2;
+            continue;
+          }
+          parent.append(document.createTextNode("**"));
+          position += 2;
+        }
+      }
+
+      function markdownBody(text) {
+        const body = make("div", undefined, "message-body markdown");
+        const lines = String(text).replace(/\r\n?/g, "\n").split("\n");
+        let index = 0;
+        while (index < lines.length) {
+          if (!lines[index].trim()) {
+            index += 1;
+            continue;
+          }
+          if (/^ {0,3}```(?:[A-Za-z0-9_-]{0,32})?\s*$/.test(lines[index])) {
+            index += 1;
+            const codeLines = [];
+            while (index < lines.length && !/^ {0,3}```\s*$/.test(lines[index])) {
+              codeLines.push(lines[index]);
+              index += 1;
+            }
+            if (index < lines.length) index += 1;
+            const block = make("pre");
+            block.append(make("code", codeLines.join("\n")));
+            body.append(block);
+            continue;
+          }
+          const unordered = lines[index].match(/^ {0,3}[-+*]\s+(.+)$/);
+          const ordered = lines[index].match(/^ {0,3}\d+\.\s+(.+)$/);
+          if (unordered || ordered) {
+            const list = make(unordered ? "ul" : "ol");
+            const pattern = unordered
+              ? /^ {0,3}[-+*]\s+(.+)$/
+              : /^ {0,3}\d+\.\s+(.+)$/;
+            while (index < lines.length) {
+              const item = lines[index].match(pattern);
+              if (!item) break;
+              const listItem = make("li");
+              appendInlineMarkdown(listItem, item[1]);
+              list.append(listItem);
+              index += 1;
+            }
+            body.append(list);
+            continue;
+          }
+          const paragraphLines = [];
+          while (
+            index < lines.length
+            && lines[index].trim()
+            && !/^ {0,3}```(?:[A-Za-z0-9_-]{0,32})?\s*$/.test(lines[index])
+            && !/^ {0,3}(?:[-+*]\s+|\d+\.\s+)/.test(lines[index])
+          ) {
+            paragraphLines.push(lines[index]);
+            index += 1;
+          }
+          const paragraph = make("p");
+          appendInlineMarkdown(paragraph, paragraphLines.join(" "));
+          body.append(paragraph);
+        }
+        return body;
+      }
       const notice = (id, message) => {
         setText(id, message);
         byId(id).hidden = !message;
@@ -842,9 +958,12 @@
         const follow = kind === "user" || log.scrollHeight - log.clientHeight - log.scrollTop < 64;
         byId("chat-empty")?.remove();
         const message = make("article", undefined, `message ${kind}`);
+        const body = kind === "assistant"
+          ? markdownBody(text)
+          : make("p", text, "message-body plain");
         message.append(
           make("p", kind === "user" ? `你 · ${profile.user}` : "FinOps Copilot", "message-name"),
-          make("p", text, "message-body")
+          body
         );
         const toolNames = Array.isArray(tools) ? tools.filter((tool) => typeof tool === "string") : [];
         if (toolNames.length) message.append(make("p", `已呼叫工具：${toolNames.join(" · ")}`, "message-tools"));
