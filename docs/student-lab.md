@@ -51,8 +51,8 @@ python -m finops_agent --data-dir data cost
 
 ## Lab 1：讓 Copilot 幫忙查原因
 
-這次不用貼一大段操作規則：repo 已附上調查與 dashboard 兩個 **skills**，幫 Copilot 記住做事方式。
-它們放在 `.github/skills/`，跟 repo 一起提供，不用另外下載或安裝。
+本專案提供兩個 **skills（給 Copilot 的工作指引）**：調查 skill 協助分析用量，dashboard skill 用於選做的網頁呈現。
+它們放在 `.github/skills/`，不需另外下載或安裝。
 
 ### 1. 給它一個任務
 

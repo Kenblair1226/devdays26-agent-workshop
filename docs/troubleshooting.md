@@ -10,7 +10,7 @@
 | 找不到 `/finops-investigation` 或 `/finops-dashboard` | 在 VS Code 開啟 repo 根目錄，Chat 選 Agent；用 `/skills` 開 Configure Skills，確認 `chat.useAgentSkills` 已啟用（目前預設 true）。仍不可用時，附上 [調查 SKILL.md](../.github/skills/finops-investigation/SKILL.md) 或 [dashboard SKILL.md](../.github/skills/finops-dashboard/SKILL.md)，請 Agent 手動遵循；無須全域安裝或額外 extension |
 | 把 skill 當成 SDK 工具或自動授權 | 這兩個是 VS Code IDE skills，不是 Python CLI 命令；SDK 維持 `enable_skills=False`、原有 roles／allowlist。Skill 不是權限沙箱，命令與 edits 仍須檢視 |
 | Lab 1 imports Copilot/Azure 失敗 | 確認執行目前版本的 `local_cli.py`；deterministic tools 包括 `trend`／`roster`／`workflows`／`options` 不需載入 SDK，設好 `PYTHONPATH` 後可用 `python -S` |
-| Lab 1 的 `NotImplementedError` | 你可能使用舊版 starter；新版工具已全部提供，不應要求補 aggregation |
+| Lab 1 的 `NotImplementedError` | Lab 1 工具已提供；請 TA 確認教材檔案完整，且 `PYTHONPATH` 指向 `starter/src`，不用另外實作 aggregation |
 | Agent 新 terminal 找不到 package 或資料 | 回 repo root，啟用既有 venv，重設 `PYTHONPATH`、`FINOPS_BACKEND=mock`、`FINOPS_ALLOW_REAL_WRITES=false`；不讓調查 prompt 安裝、讀憑證或 provision |
 | Agent／terminal tools 不可用 | 使用 Ask fallback：人手動執行下一個唯讀命令，只貼該次 JSON 結果，請模型給目前假設／下一項需要的事實；不一次附完整答案包 |
 | Agent 想先讀整份 fixtures、教師答案或跑 `options` | 停止這一步，回到 `trend` → user/model 線索 → 按需 roster／workflow；先驗證工作量與成功成果，才能比較方案 |
@@ -33,15 +33,15 @@
 | Dashboard 把 0.01 差異當成資料毀損 | 原始資料先加總再顯示兩位小數；模型 credits 小計為 34906.66、部門 USD 小計為 329.13，但全體仍是 34906.67／329.12。跨維度採有界四捨五入容差，保留 `rounding_note`；gross credits 減 discount credits 也可能差 0.01。每日顯示值加總則應恰好對回全體 |
 | Dashboard 調查面板缺資料或兩期 as_of 不同 | 要求用 `--include-investigation` 匯出新檔；不可從普通 brief 猜 migration／review／pilot。比較期 as_of 是 8/22，當期是 9/22，各 22 日，不必相同；增長差額由原始彙總算，顯示值相減可能差 0.01 |
 | Dashboard 將 org budget 已用改成 329.12 | Budget 必須讀自己的 snapshot：org 限額 600／已用 331.47／剩餘 268.53，carol 已用 102.67／限額 150／剩餘 47.33；run-rate USD 448.80 與情境餘額 270.88 另列 |
-| Copilot Agent 提議安裝依賴、修改 source 或 `.env` | 主線只准現成唯讀查詢，不編輯任何檔案。決策後的選做才允許 `workshop-output/finops-dashboard.html`（已有則新檔名）；`starter/src/finops_agent/demo.html` 僅唯讀樣式，不複製 admin／API。Prompt 不是 IDE 強制沙箱，使用者仍須拒絕越界 |
+| Copilot Agent 提議安裝依賴、修改 source 或 `.env` | Lab 1 調查階段只使用現成唯讀工具，不修改原始碼、資料集或設定。學員確認後，可儲存摘要至 `workshop-output/finops-review.md`；選做 dashboard 時才建立 `workshop-output/finops-dashboard.html`。檔案已存在請另取新名，不覆蓋作品。`starter/src/finops_agent/demo.html` 只可唯讀參考樣式，不複製 admin／API。Skill 不是 IDE 的強制權限沙箱，仍須檢視並拒絕越界操作 |
 | Dashboard 把 JSON 文字當成 HTML／出現執行行為 | 請改成 `textContent`，不用 `innerHTML`；先檢視生成檔再手動開啟，不自動執行或上傳 |
 | Dashboard 要加暫時預算按鈕 | 拒絕；proposal comparison 是唯讀，不提供 temporary_budget／approval API 或任何外部寫入。Lab 2 的 localhost 角色頁面是不同練習 |
 | Chat 建議立刻回收 judy | 指出 activity=null 是未知；要求與 billing evidence 交叉比對、改成待確認事項 |
-| Chat 因 AI Lab 用最多就建議全面削減 | 要求先查 roster／workflow：80 → 200 成功批次、每批 USD 0.953333／88 credits 穩定。量增加不證明浪費，仍需比對相同成功定義；不能因此保證所有 migration 都有效率 |
-| Chat 把兩個方案合計成「月節省」 | A/B 的 9/1～9/22 反事實機會不退款；只有 9/23～9/30、假設成立且 cohorts 不重疊時才可合計 USD 9.63 + 5.65 = 15.28。不加歷史機會或 C 的 headroom，不保證精準 invoice |
-| Chat 說 mini 可以省 40% tokens／credits | Pilot 20/20 對 20/20、USD 2 對 1.20 只支持該 simple-maintenance cohort 的貨幣比率；`estimated_credit_savings=null`。品質 gate 不過就沒有量化 savings 建議，不擴展到 migration |
-| `estimate_status` 是 `quality_gate_failed`／`not_cheaper` 卻仍推薦固定節省 | 顯示 null 金額估算，不補零或沿用成功案例；只有 `conditional_pilot_estimate` 才提供條件式金額。A 的 `remaining_month_credit_savings=1026.67` 只屬於重複觸發方案，不能拿來推論 B 的 credits |
-| Chat 說提高 budget 就省 USD 70 | 150 → 220 只增加 headroom，節省 USD 0。carol 剩餘 60 批次約 USD 61.60、個人合計 164.27 是工作計畫估算，與全組織 47,600 credits／448.80 歷史 run-rate 不同 |
+| Chat 因某團隊用最多就建議全面削減 | 請要求 Copilot 查詢該團隊的工作量、成功成果與單位成本，再判斷是否有改善空間。只比較相同成功定義的任務；高用量不等於浪費 |
+| Chat 把兩個方案合計成「月節省」 | 只合計同一未來期間、假設成立且範圍互不重疊的方案估算。過去的改善機會不會退款，增加額度不算節省，也不能保證最終帳單 |
+| Chat 用模型試跑金額推算 tokens／credits | 請核對試跑的任務範圍、通過率與金額。只有品質門檻通過時，才提供該範圍的條件式金額估算；`estimated_credit_savings=null` 表示未估計，不推算 tokens／credits，也不直接套用到其他任務 |
+| `estimate_status` 是 `quality_gate_failed`／`not_cheaper` 卻仍推薦固定節省 | 顯示 null 金額估算，不補零或沿用成功案例；只有 `conditional_pilot_estimate` 才提供條件式金額。各方案的 `remaining_month_credit_savings` 只適用於自己的範圍與假設，不能拿來推論另一方案 |
+| Chat 把提高預算當成節省 | 加額只是增加可用額度，沒有減少已用金額。請分開看工作計畫估算、帳務資料與預算餘額，再由管理者決定是否核准；不要把個人工作計畫與全組織歷史速率混為一談 |
 | Lab 2 的 `NotImplementedError` | 只補 `demo_connection.py` 的 factory；tools、instructions 與 UI 都已提供 |
 | `demo` 頁面 403 | 使用該次啟動的正確 User/Admin link；把 user token 換成 admin view 不會取得管理權限 |
 | 8098 已使用 | 加 `demo --port 8099`，再用新 console links |
