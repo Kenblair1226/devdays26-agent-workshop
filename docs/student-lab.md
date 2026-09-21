@@ -1,13 +1,13 @@
 # 學員手冊：打造 Copilot FinOps Agent
 
-這次一起做三件事：**找出用量成長的原因 → 申請並核准額度 → 換成 Foundry 模型**。
+這次一起做三件事：**找出用量成長的原因 → 申請並核准額度 → 選配部署 Hosted Agent**。
 先完成每段的主要成果，再決定要不要加做選配項目。
 
 | 階段 | 你會做出什麼 |
 | --- | --- |
 | Lab 1 | 一頁有證據的決策摘要；也可以加做網頁 dashboard |
-| Lab 2 | 使用者提出申請，管理者核准，畫面顯示新額度 |
-| Lab 3（選配） | 同一個 Agent 改用 Foundry Model，或觀摩講師示範 |
+| Lab 2 | 使用者提出申請，管理者核准，畫面顯示新額度；也可以選配改用 Foundry Model 重跑 |
+| Lab 3（選配） | 將同一個 Agent 部署成 Foundry Hosted Agent，或觀摩講師示範 |
 
 我們使用 **2026/9/1–9/22 的模擬資料**，不是你的真實帳單。AI credits 也不是原始 tokens。
 報表工具在本機執行；Copilot／Foundry 的模型仍是線上服務，可能產生使用費用。
@@ -173,7 +173,7 @@ Admin 連結交給管理者保管，不要分享或截圖；持有它就能操�
 如果模型連不上，可用頁面上「直接提交 mock 申請（不經模型）」繼續練習，但這不代表模型呼叫成功。
 重開 demo 會恢復初始資料，舊連結也會失效。
 
-## Lab 3：換成 Foundry Model（選配）
+### 選做：改用 Foundry Model
 
 主辦方已準備好模型與權限就跟著做，否則觀摩講師。
 **這段只換模型，不加入 Toolbox 或其他服務，也不用先部署到雲端。**
@@ -181,7 +181,7 @@ Admin 連結交給管理者保管，不要分享或截圖；持有它就能操�
 ### 1. 停止 demo，改模型設定
 
 先按 `Ctrl+C`。下面的 endpoint 和 deployment name 請填主辦方提供的值。
-`foundry-identity` 使用已授權的開發者身分；若主辦方提供 API key，改照 [模型設定](environment-prep.md#lab-3-foundry-model-課前準備) 使用 `AZURE_OPENAI_API_KEY`，不要貼進 Chat。
+`foundry-identity` 使用已授權的開發者身分；若主辦方提供 API key，改照 [模型設定](environment-prep.md#lab-2-選配foundry-model-課前準備) 使用 `AZURE_OPENAI_API_KEY`，不要貼進 Chat。
 
 PowerShell：
 
@@ -213,11 +213,14 @@ python -m finops_agent demo
 要看到 SDK 聊天真正回覆，才算模型接通；只有數字卡片或備援表單正常還不夠。
 如果連不上就看講師示範，或停止程序、改回 `FINOPS_MODEL_PROVIDER=copilot`，使用原本可用的 token 再啟動。
 
-**Checkpoint 3：** 說得出「換了模型，但資料、工具與人工核准流程沒有變」。
+**Lab 2 選配驗收：** 說得出「換了模型，但資料、工具與人工核准流程沒有變」。
 Foundry 推論費用由 Azure 另計，mock GitHub budget 不會限制它。
 
-想繼續部署，而且主辦方已備妥 hosting 環境時，再看 [選配 Hosted 部署](hosted-deployment.md)。
-請分開記錄「模型接通」「Hosted 部署完成」或「觀摩」，不要混為一談。
+## Lab 3：部署 Foundry Hosted Agent（選配）
+
+這一段是獨立 Lab，不是上面的 model switch。主辦方已備妥 hosting 環境時，依
+[Lab 3 Hosted Agent 部署](hosted-deployment.md) 操作；否則觀摩講師示範。
+請分開記錄「Lab 2 Foundry 模型接通」「Lab 3 Hosted 部署完成」或「觀摩」，不要混為一談。
 
 ## 卡住時
 

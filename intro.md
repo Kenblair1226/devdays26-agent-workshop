@@ -9,8 +9,8 @@
 > 本月 AI credits 成長異常。請找出主要原因，預估月底用量，提出兩個改善方案
 
 1. **Lab 1**：GitHub Copilot Chat Agent 使用現成唯讀工具，從每日趨勢到 user/model，再按需查團隊／workflow；交付原因、月底估算與兩個方案的一頁決策摘要，選做網頁 dashboard
-2. **Lab 2（local-only）**：只接上一個 Copilot SDK harness factory，使用者可詢問個人花費與節省建議、申請提高限額，管理者從另一個頁面核准
-3. **Lab 3（optional）**：讓同一個 Copilot SDK harness 改用 Foundry Model，重跑費用查詢與核准情境；完成模型切換且 hosting 就緒後，再選配 direct-code deploy 到 Foundry Agent Service，否則由講師 demo
+2. **Lab 2（local-only）**：只接上一個 Copilot SDK harness factory，使用者可詢問個人花費與節省建議、申請提高限額，管理者從另一個頁面核准；選配讓同一個 harness 改用 Foundry Model 重跑
+3. **Lab 3（optional）**：將同一個 Agent direct-code deploy 到 Foundry Hosted Agent；hosting 未就緒時觀摩講師 demo
 
 ### 課程重點
 
@@ -37,7 +37,7 @@
 - 選做 [`/finops-dashboard`](.github/skills/finops-dashboard/SKILL.md) 沿用 Copilot 登入與 Clawpilot 樣式；檢視後只建立 `workshop-output/finops-dashboard.html`，以 File API 載入 evidence，不新增依賴、CDN、網路、server 或管理操作
 - Lab 2 的頁面與 mock 核准可在本機執行；**SDK 聊天需要 `COPILOT_GITHUB_TOKEN` 或 organizer BYOK**，不需正式 org 權限或 SSO
 - Lab 2 只有 `get_my_costs`、`get_my_savings`、`request_budget_increase` 三個個人工具，不提供組織 roster／workflow 或模型核准。用 carol 的 migration 理由演練 150／102.67／47.33 → 人核准後 220／102.67／117.33；+70 headroom 不是成本下降，mock expiry 不代表自動回復
-- Lab 3 優先使用主辦單位預配置的 Foundry model 與 Managed Identity，且 `starter/azure.yaml` 需要 **azd >= 1.27.1**
+- Lab 2 的 model switch 優先使用主辦單位預配置的 Foundry model；Lab 3 Hosted Agent 使用 Managed Identity，且 `starter/azure.yaml` 需要 **azd >= 1.27.1**
 - 不要使用 admin / billing token
 
 ### 快速連結
@@ -70,8 +70,8 @@ This workshop has exactly three labs. Progress through the core outcomes, with o
 > This month's AI credits have grown unexpectedly. Find the main causes, estimate month-end usage, and propose two improvements.
 
 1. **Lab 1**: Copilot Chat Agent uses ready-made read-only tools, moving from daily trends to user/model distribution and on-demand team/workflow evidence; produce a one-page cause, forecast, and two-option decision brief, with an optional local dashboard
-2. **Lab 2 (local-only)**: connect one Copilot SDK harness factory; a user asks about spending and savings, requests a higher limit, and an administrator approves on a separate page
-3. **Lab 3 (optional)**: switch the same Copilot SDK harness to a Foundry model and repeat the cost/approval flow; proceed with direct-code hosting when prepared, or watch the instructor demo
+2. **Lab 2 (local-only)**: connect one Copilot SDK harness factory; a user asks about spending and savings, requests a higher limit, and an administrator approves on a separate page; optionally switch the same harness to a Foundry model and repeat the flow
+3. **Lab 3 (optional)**: direct-code deploy the same agent as a Foundry Hosted Agent, or watch the instructor demo when hosting is unavailable
 
 ### Highlights
 
@@ -96,7 +96,7 @@ This workshop has exactly three labs. Progress through the core outcomes, with o
 - GitHub account with GitHub Copilot access
 - Workshop repo with `starter/`, `solution/`, and `data/`
 - Copilot auth or organizer BYOK for the Lab 2 SDK chat; user/admin pages use local mock roles
-- A preprovisioned Foundry environment for Lab 3 hands-on
+- A preprovisioned Foundry model for the optional Lab 2 switch and a hosting environment for Lab 3 hands-on
 
 ### Links
 
@@ -110,4 +110,4 @@ This workshop has exactly three labs. Progress through the core outcomes, with o
 - Do not use admin or billing tokens
 - Do not upload confidential, personal, or production data
 - Learners connect the Lab 2 factory in `starter/`; `solution/` is the reference and `scripts/checkpoint.py` restores checkpoints with backups. Lab 1 analysis and optional dashboard files stay in `workshop-output/`, outside source checkpoints
-- Lab 3 may switch to instructor demo if deployment is slow or resources are unavailable
+- Lab 3 may switch to instructor demo if Hosted Agent deployment is slow or resources are unavailable

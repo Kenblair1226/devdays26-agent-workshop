@@ -1,6 +1,6 @@
 # 環境準備與課前檢查
 
-學員約 40 人。**課前完成安裝與認證**，讓現場可以專心實作。課程依序進行用量調查、本機額度申請與人工核准；Foundry 模型切換及 Hosted 部署為選配項目。不加入 Toolbox、檢索或新的觀測服務。
+學員約 40 人。**課前完成安裝與認證**，讓現場可以專心實作。課程依序進行用量調查、本機額度申請與人工核准；Foundry 模型切換是 Lab 2 選配，Hosted Agent 部署是 Lab 3 選配。不加入 Toolbox、檢索或新的觀測服務。
 
 ## 學員必要環境
 
@@ -8,10 +8,10 @@
 | --- | --- | --- | --- |
 | Git、VS Code、Python 3.13、repo | 必要 | 必要 | 必要 |
 | VS Code Copilot Chat 登入／使用權限 | Agent 唯讀 terminal 調查；Ask 作逐次貼結果的備案，選做 dashboard 建檔 | 可作開發輔助 | 不影響 hosting |
-| Copilot SDK 與其 pinned runtime | 報表工具不需要 | 必要 | 必要 |
+| Copilot SDK 與其 pinned runtime | 報表工具不需要 | 必要 | Hosted Agent runtime 使用 |
 | 瀏覽器與可用的 localhost port | 選做 dashboard 用瀏覽器開本機檔案，不佔 port | 8098，User/Admin 兩分頁 | 依主辦方環境 |
-| 個人 Copilot token 或主辦方 BYOK | 不需要 | 模型問答時需要 | 視選定 model provider |
-| Azure CLI 登入或模型 key | 不需要 | Copilot 主線不需要 | Foundry 模型呼叫需其一 |
+| 個人 Copilot token 或主辦方 BYOK | 不需要 | 模型問答時需要；選配 Foundry provider | Hosted 使用 Managed Identity |
+| Azure CLI 登入或模型 key | 不需要 | Copilot 主線不需要；選配 Foundry Model 需其一 | 部署及 remote invocation 需課前權限 |
 | azd ≥1.27.1、Foundry extension、hosting 環境 | 不需要 | 不需要 | 選配 Hosted 部署才需要 |
 | 預建 Foundry project、model、RBAC | 不需要 | Copilot 主線不需要 | 個人配發的環境，或講師 demo |
 
@@ -121,9 +121,9 @@ MODEL_NAME=<your-model-deployment-name>
 
 `.env.example` 是設定說明，不會自動生效；複製為 `starter/.env` 後由 CLI 載入。Process environment 優先，不要同時留下不同 provider 的舊值。
 
-Lab 3 的 identity 路線使用 `FINOPS_MODEL_PROVIDER=foundry-identity`、`AZURE_OPENAI_ENDPOINT`、`MODEL_NAME`；`AZURE_OPENAI_API_KEY` 留空即可。只有這種 provider 才會載入 Azure credential；Lab 1/2 的 Copilot 路線仍使用 `COPILOT_GITHUB_TOKEN` 和 `COPILOT_MODEL`，不需要 Azure。
+Lab 2 選配的 identity 路線使用 `FINOPS_MODEL_PROVIDER=foundry-identity`、`AZURE_OPENAI_ENDPOINT`、`MODEL_NAME`；`AZURE_OPENAI_API_KEY` 留空即可。只有這種 provider 才會載入 Azure credential；Lab 1 與 Lab 2 的 Copilot 主線仍使用 `COPILOT_GITHUB_TOKEN` 和 `COPILOT_MODEL`，不需要 Azure。
 
-## Lab 3 Foundry Model 課前準備
+## Lab 2 選配：Foundry Model 課前準備
 
 只使用主辦方**已部署、已完成 tool-calling 彩排**的模型，不現場選 region、申請配額或新增模型。此 harness 使用 OpenAI-compatible Responses API，並非 Foundry catalog 裡每一個模型都一定相容。模型名稱必須填 Azure 的 deployment name；同一個模型來源切換不需要改 UI 或工具。
 
@@ -159,7 +159,7 @@ Foundry hands-on 不是現場從零 provision。建議由 **1 位講師 + 3–4 
 | --- | --- |
 | 環境設計 | 確認地區、hosted/code deployment 支援、模型配額、使用成本上限；完成一套 golden environment |
 | 個人環境建置 | 預建 40 套個人 project/environment，隔離登入與權限；確認 model deployment 名稱、Managed Identity 權限與模型呼叫 |
-| 功能彩排 | 每台/每人安裝 Python、依賴及 runtime；確認 Lab 1 Agent terminal／Ask fallback 的逐步證據、決策後匯出、Lab 2 User/Admin、Foundry Model 切換及回復；若示範選做 dashboard，另核對本機選檔與加總；若要部署，另做小批量 deployment/invoke 彩排 |
+| 功能彩排 | 每台/每人安裝 Python、依賴及 runtime；確認 Lab 1 Agent terminal／Ask fallback 的逐步證據、決策後匯出、Lab 2 User/Admin 及選配 Foundry Model 切換／回復；若示範選做 dashboard，另核對本機選檔與加總；Lab 3 另做小批量 deployment/invoke 彩排 |
 | 開場檢查 | 講師 endpoint 與 logs 可用，備妥範例回應或錄影、checkpoint recovery、TA 分區表 |
 
 只存在 Azure 資源還不夠：每人本機 `starter/.azure/` 必須已綁定正確的個人 azd environment。主辦方依 [Foundry Hosted Agent 部署指南](https://learn.microsoft.com/azure/foundry/agents/how-to/deploy-hosted-agent) 建立與綁定，`starter/azure.yaml` 是 code deployment 設定。不要把含 secrets 的 `.azure/` 複製給全班、提交到 Git，或讓全班共用講師的 admin identity。
@@ -168,9 +168,9 @@ Foundry hands-on 不是現場從零 provision。建議由 **1 位講師 + 3–4 
 
 **配額與費用不是教材保證值。** YAML 的 CPU/memory 是每個執行實例設定；40 人並行、cold start、模型 RPM/TPM 與 runtime download egress 都需在活動地區實測。分四批啟動部署可降低同時重試壓力。不要因 429 讓全場無限 retry。
 
-## Lab 3 可用條件與 fallback
+## Lab 3 Hosted Agent 可用條件與 fallback
 
-進入 Lab 3 前，先確認 Lab 2 核心成果、模型與 inference 權限，再做 Foundry Model 切換；只有 hosting 也預備好才進入部署。模型或權限不可用時看講師模型 demo，或明確切回 Copilot；hosting 未開通、部署受阻或持續等待時，改用講師預部署端點。若講師雲端也不可用，播放課前錄影。模型呼叫、hosting 部署與觀摩要分別標示，不互相代替。
+進入 Lab 3 前，先確認 Lab 2 核心成果；Lab 2 的 Foundry Model 切換可做可不做，不是 Lab 3 本身。只有 hosting 已預備好才進入部署。模型或權限不可用時看講師模型 demo，或明確切回 Copilot；hosting 未開通、部署受阻或持續等待時，改用講師預部署端點。若講師雲端也不可用，播放課前錄影。Lab 2 model switch、Lab 3 hosting 部署與觀摩要分別標示，不互相代替。
 
 Cloud readiness 必須包含一次真正的 remote invocation；本機 `/readiness` 只代表 HTTP host 啟動，不能證明 Managed Identity、模型授權或完整 tool calling 已成功。
 

@@ -22,15 +22,15 @@ IDE skill 不啟用 Python SDK skills，也不是權限沙箱；仍檢視命令�
 
 ## 依成果推進的帶領流程
 
-依學員完成狀態調整節奏，先守住 Lab 1 的分析成果與 Lab 2 的人工核准流程。Foundry 模型切換與 hosting 分別依環境就緒情況決定實作或示範。
+依學員完成狀態調整節奏，先守住 Lab 1 的分析成果與 Lab 2 的人工核准流程。Foundry 模型切換是 Lab 2 選配，Hosted Agent deployment 才是 Lab 3；兩者分別依環境就緒情況決定實作或示範。
 
 | 階段 | 講師任務 | TA／學員成果 |
 | --- | --- | --- |
 | 開場 | 說明情境、完成品與安全邊界 | 知道今天不操作真實公司資料 |
 | 環境確認 | 啟動 starter baseline | Python3.13、cost=34906.67/329.12 |
 | Lab 1 | 趨勢 → 分布 → 按需 roster／workflow → forecast → 三選二；完成決策後才匯出，選做 dashboard | 一頁決策摘要：原因、工作量／成果、月底估算、2 行動與1 不選理由；來源、期間、owner 和品質 gate 齊備 |
-| Lab 2 | 接上 harness，跑完 User 問答、加額申請與 Admin 核准 | pending 不改額度；approved 後 220／102.67／117.33，重新查詢並核對 audit |
-| Lab 3（選配） | 切換 Foundry Model，再選配 Hosted 部署或講師 demo | 模型呼叫與 hosting 分別驗收；工具與核准規則不變，Azure inference 另計 |
+| Lab 2 | 接上 harness，跑完 User 問答、加額申請與 Admin 核准；選配切換 Foundry Model 重跑 | pending 不改額度；approved 後 220／102.67／117.33，重新查詢並核對 audit；model switch 不改工具與核准規則 |
+| Lab 3（選配） | 依獨立文件部署 Foundry Hosted Agent，或觀摩講師 demo | 驗收 remote invocation；Azure inference 與 hosting 另計 |
 | 延伸討論 | 模型選擇、治理與 Q&A | 釐清資料與權限限制，不增加第四個 Lab |
 | 收尾 | 核對成果、清理 | 無遺留 token、host 程序 |
 
@@ -44,7 +44,7 @@ IDE skill 不啟用 Python SDK skills，也不是權限沙箱；仍檢視命令�
 | Lab 1 分析卡住 | 和 TA 確認當前假設與下一個唯讀命令；先核對成功定義、再完成兩個選擇和一個不選理由，不改成編碼題 |
 | 選做 dashboard 卡住／Agent 模式不可用 | 保留決策摘要，先進 Lab 2；不為選做安裝平台、啟動 server 或犧牲核心成果 |
 | Lab 2 接線卡住 | 還原 Lab 2 checkpoint，優先完成問答與人工核准 |
-| Foundry 未就緒，或多數學員仍需完成本機核心流程 | 優先完成 Lab 1/2，Lab 3 改講師 demo |
+| Foundry 未就緒，或多數學員仍需完成本機核心流程 | 優先完成 Lab 1/2；跳過 Lab 2 model switch，Lab 3 改講師 demo |
 | 部署受阻或出現廣泛 429 | 停止新的重試，使用既有 endpoint |
 
 每個人原則上有自己的預建 Foundry environment；不是把全班連到同一個有寫入權限的 Agent。完成較快者可做 Lab 1 選做 dashboard，或測試未知使用者、無 activity、不同期間或錯誤 payload；不要增加第四個 lab。
@@ -170,19 +170,25 @@ Copilot Chat 無法使用時，pair programming 或講師示範，不交換 toke
 
 Seat 回收、通用 `chat` 的 `/approve`、`approval-demo` 都留作主線完成後的延伸討論或課後練習。**Lab 2 必做只有個人查詢、節省建議、提高限額與 admin approve。**
 
-## Lab 3：Foundry Model 切換與選配部署
+## Lab 2 選配：Foundry Model 切換
 
-本次只加 Foundry Model；**不建立 Toolbox、政策檢索或新的 tracing integration**。課前依 [模型準備](environment-prep.md#lab-3-foundry-model-課前準備) 核對 endpoint、deployment name、inference 權限與 SDK 的 Responses/tool-calling 相容性，不能只在 portal 手動問一句就視為完整接通。
+本次只換 Foundry Model；**不建立 Toolbox、政策檢索或新的 tracing integration**。課前依 [模型準備](environment-prep.md#lab-2-選配foundry-model-課前準備) 核對 endpoint、deployment name、inference 權限與 SDK 的 Responses/tool-calling 相容性，不能只在 portal 手動問一句就視為完整接通。
 
 確認 Lab 2 核心流程完成、Foundry 模型與權限可用後，先停止 Lab 2 demo，切換 `FINOPS_MODEL_PROVIDER=foundry-identity` 並設定 `AZURE_OPENAI_ENDPOINT`、`MODEL_NAME` 再啟動；本機使用開發者身分，Hosted 才用 Managed Identity。已配 key 的備案則用 `foundry-key`，再加上 `AZURE_OPENAI_API_KEY`。GitHub Copilot 的 `COPILOT_MODEL` 不用改成 Azure deployment name。重新開啟兩個角色連結，提醒學員重啟會重設 mock 申請，不是模型替使用者還原預算。
 
 用同一段問題重跑：查個人花費、節省建議、以剩餘 migration 計畫要求提高到 220、admin approve。數字應維持初始 150／102.67／47.33，pending 不變，核准後才是 220／102.67／117.33；三工具 scope 不變。比較措辭、evidence 引用、是否區分 headroom 與節省及延遲，**不要只因模型不同就宣稱較省**，更不要把合成 GitHub 帳務數字當成這次 Azure inference 的費用。
 
-只換模型不需要部署 Hosted Agent。完成模型切換、預建 hosting 也就緒且學員進度允許時，再依 [選配 Hosted 部署](hosted-deployment.md) 操作，查看 `invocation_id` 與 `tool_calls`；`azd ai agent monitor` 只看近期 console logs，不宣稱完整 token trace。Tool logs 不記 keys、approval token 或整份企業報表。
+只換模型不需要部署 Hosted Agent。
+
+如果模型連線不通，停止 demo 後明確切回 `copilot`，恢復原本的 `COPILOT_MODEL` 和個人 token；或展示講師課前錄影。不要暗中 fallback 然後宣稱 Foundry 成功。
+
+## Lab 3：Foundry Hosted Agent（選配）
+
+預建 hosting 已就緒且學員進度允許時，依獨立的 [Lab 3 Hosted Agent 部署](hosted-deployment.md) 操作，查看 `invocation_id` 與 `tool_calls`；`azd ai agent monitor` 只看近期 console logs，不宣稱完整 token trace。Tool logs 不記 keys、approval token 或整份企業報表。
 
 Hosted 範例採**每次 invocation 獨立 mock state**，不提供 Lab 2 的瀏覽器頁面或跨使用者共享核准 API；學生不會透過 remote endpoint 寫真實 seats。若進一步產品化，需要登入／授權、可信部門來源、durable approval store、API concurrency 控制與完整 retention policy。
 
-如果模型連線不通，停止 demo 後明確切回 `copilot`，恢復原本的 `COPILOT_MODEL` 和個人 token；或展示講師課前錄影。不要暗中 fallback 然後宣稱 Foundry 成功。若只有 hosting 不可用，保留已完成的模型 demo，hosting 部分改成觀摩即可。
+如果 hosting 不可用，保留已完成的 Lab 1／Lab 2 成果，Lab 3 改成觀摩即可。
 
 ## 真實 GitHub adapter：講師選配
 

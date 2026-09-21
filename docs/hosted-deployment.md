@@ -1,8 +1,8 @@
-# 選配：部署到 Foundry Hosted Agent
+# Lab 3（選配）：部署到 Foundry Hosted Agent
 
-先完成 Lab 1、Lab 2，並確認 Foundry 模型可以透過 SDK 回答問題。
+先完成 Lab 1、Lab 2；若做過 Lab 2 的 Foundry Model 選配，也要能分清本機 model switch 與 Hosted Agent deployment。
 只有主辦方已配好個人 hosting 環境、權限及 `starter/.azure/` 綁定，才操作這段。
-尚未準備好就觀摩講師，不現場建立共用資源或反覆重試；課前要求見 [環境準備](environment-prep.md#lab-3-可用條件與-fallback)。
+尚未準備好就觀摩講師，不現場建立共用資源或反覆重試；課前要求見 [環境準備](environment-prep.md#lab-3-hosted-agent-可用條件與-fallback)。
 
 ## 這次部署什麼？
 

@@ -9,8 +9,8 @@
 | Lab | Hands-on | 執行位置 |
 | --- | --- | --- |
 | 1 | Copilot Chat Agent 按需使用現成唯讀工具：每日趨勢 → user/model → 團隊／workflow；交付原因、預測、兩方案摘要，選做 dashboard | 本機 mock 資料；Copilot Chat 使用既有 GitHub 登入 |
-| 2 | 一次 harness 接線：查費用／節省建議 → 申請提高限額 → 管理者 approve | 本機使用者／管理者頁面，Copilot 或 BYOK model |
-| 3 | 同一個 harness 換成 Foundry Model，再選配 direct-code deploy | 預建模型；依環境與學員進度選擇實作或講師 demo |
+| 2 | 一次 harness 接線：查費用／節省建議 → 申請提高限額 → 管理者 approve；選配改用 Foundry Model 重跑 | 本機使用者／管理者頁面，Copilot 或 BYOK model |
+| 3（選配） | 將同一個 Agent direct-code deploy 到 Foundry Hosted Agent | 預建 hosting 環境；依學員進度選擇實作或講師 demo |
 
 **學員入口：[環境準備](docs/environment-prep.md) → [學員手冊](docs/student-lab.md)。**
 講師請先讀 [講師指南](docs/instructor-guide.md)，並參考 [架構](docs/architecture.md) 與 [疑難排解](docs/troubleshooting.md)。[intro.md](intro.md) 保留中英文活動簡介。
@@ -46,13 +46,15 @@ Checkpoint 1 是 `workshop-output/finops-review.md`：有證據的原因、月�
 
 Lab 2 接線後執行 `python -m finops_agent demo`，開啟終端提供的 User / Admin 兩個連結。用 C 的 migration 業務理由演練（不要求小組一定選 C）：carol 9/30 前剩 60 批次、估計還需 USD 61.60，個人計畫總額約 164.27。User 已用 USD 102.67、限額 150、剩餘 47.33；要求提高至 220 後先維持 pending、額度不變，人確認 scope、hard stop 與 review／expiry 後才變成 **限額 220、已用 102.67 不變、剩餘 117.33**。增加 70 是 headroom，節省 0；mock `expires_at` 不代表自動回復。只提供 `get_my_costs`、`get_my_savings`、`request_budget_increase`，沒有組織調查或 approve 工具，不需複製 plan ID、token 或輸入 JSON。
 
-Lab 3 只新增 **Foundry Model 切換**，不加入 Toolbox 或其他服務。依 [課前模型設定](docs/environment-prep.md#lab-3-foundry-model-課前準備) 選用既有 `foundry-identity`／`foundry-key` provider，重啟同一個本機 demo；SDK、個人工具、mock 資料和 admin approval 不變。呼叫 Foundry 模型不等於 Hosted Agent 已部署；[Hosted 部署](docs/hosted-deployment.md) 留作選配。
+Lab 2 完成核心流程後，可依 [課前模型設定](docs/environment-prep.md#lab-2-選配foundry-model-課前準備) 選用既有 `foundry-identity`／`foundry-key` provider，重啟同一個本機 demo；SDK、個人工具、mock 資料和 admin approval 不變。這只是 Lab 2 的選配 model switch，不等於 Hosted Agent 已部署。
+
+Lab 3 是獨立的 [Foundry Hosted Agent 部署](docs/hosted-deployment.md)，使用 direct-code hosting；只有主辦方已備妥環境時才實作，否則觀摩講師 demo。不加入 Toolbox 或其他服務。
 
 Foundry 的 `.env` 使用 `AZURE_OPENAI_ENDPOINT`、`AZURE_OPENAI_API_KEY`、`MODEL_NAME`；key 模式選 `FINOPS_MODEL_PROVIDER=foundry-key`，identity 模式不需 API key。`MODEL_NAME` 填 Azure deployment name，GitHub Copilot 的認證與 `COPILOT_MODEL` 維持原本設定。
 
 ## 安全與邊界
 
-預設 `FINOPS_BACKEND=mock`。Lab 1 的工具不需認證，但 Copilot Chat 需要 GitHub 登入；Lab 2 `ask` / `chat` 需要 SDK 的 Copilot 或 BYOK 認證。前兩個 Lab 不需 Azure hosting。SDK 自管 runtime，沒有額外 headless service 或自訂 Dockerfile。Lab 3 的 hosted 範例固定使用 mock、每次 invocation 獨立。
+預設 `FINOPS_BACKEND=mock`。Lab 1 的工具不需認證，但 Copilot Chat 需要 GitHub 登入；Lab 2 `ask` / `chat` 需要 SDK 的 Copilot 或 BYOK 認證。Lab 1、Lab 2 核心流程與 Lab 2 的本機 Foundry model switch 都不需 Azure hosting。SDK 自管 runtime，沒有額外 headless service 或自訂 Dockerfile。Lab 3 的 hosted 範例固定使用 mock、每次 invocation 獨立。
 
 `demo` 只綁定 localhost，User / Admin 使用不同的啟動期 capability；模型只持有個人查詢／申請工具，沒有 approve。這是單機角色演示，不是正式登入系統。狀態重啟即重設；不要將此頁面或 admin link 公開，也不要把 demo 核准 API 部署到 Foundry。
 

@@ -21,4 +21,4 @@ Recovery 不會重建 evidence。**完成調查與選擇後**，用 `python -m f
 
 選做依 [`/finops-dashboard`](../../.github/skills/finops-dashboard/SKILL.md) 操作，只編輯 `workshop-output/finops-dashboard.html`（或新檔名），檢視後手動開啟，以 File API 載入 evidence；不新增外連、server 或管理操作。Skill 不需全域安裝，也不是權限沙箱；無法使用時見 [疑難排解](../../docs/troubleshooting.md)。
 
-Lab 3 沿用同一個 harness 做 Foundry Model 切換，hosting 留作選配，也可觀摩講師 demo；沒有額外程式 TODO。整份課程仍是三個 Labs。
+Lab 2 可沿用同一個 harness 選配切換 Foundry Model；Lab 3 依獨立文件部署 Foundry Hosted Agent，也可觀摩講師 demo。兩者都沒有額外程式 TODO，整份課程仍是三個 Labs。

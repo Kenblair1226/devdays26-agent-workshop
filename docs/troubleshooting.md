@@ -1,6 +1,6 @@
 # 疑難排解
 
-先保住 Lab 1/2 的本機成果。Lab 3 資源或授權不可用時直接切換講師 demo，不用全場等待。
+先保住 Lab 1/2 的本機成果。Lab 2 的 Foundry model switch 可跳過；Lab 3 Hosted Agent 資源或授權不可用時直接切換講師 demo，不用全場等待。
 
 | 症狀 | 處理方式 |
 | --- | --- |
@@ -189,6 +189,6 @@ bash 將 `\` 改為 `/`。Recovery 的目標是 Lab 2 接線：編輯先備份�
 
 ## 無認證／無 Azure 時
 
-可執行現成 tools 與 demo 的直接申請／admin 核准；Lab 1 Copilot Chat 需 GitHub 登入，Lab 2 SDK 聊天需授權或 BYOK。IDE Agent 不通可改人執行 CLI／Ask 逐次分析，CLI 本身不需 Azure credentials；不把這個 fallback 說成 SDK 成功。由已登入的同學或講師示範時不要交換秘密。沒有活動 Foundry 環境就觀摩 Lab 3，不把本機 fake-model 彩排或 HTTP readiness 宣稱為雲端部署成功。
+可執行現成 tools 與 demo 的直接申請／admin 核准；Lab 1 Copilot Chat 需 GitHub 登入，Lab 2 SDK 聊天需授權或 BYOK。IDE Agent 不通可改人執行 CLI／Ask 逐次分析，CLI 本身不需 Azure credentials；不把這個 fallback 說成 SDK 成功。由已登入的同學或講師示範時不要交換秘密。沒有活動 Foundry model 就跳過 Lab 2 model switch；沒有 hosting 環境就觀摩 Lab 3，不把本機 fake-model 彩排或 HTTP readiness 宣稱為雲端部署成功。
 
 選做 dashboard 的 Agent 建檔沿用既有 Copilot 登入；已產生且檢視過的自含 HTML 可以在瀏覽器離線選取 mock JSON，沒有 server 或模型憑證。Agent 不可用就保留決策摘要、先進 Lab 2，不為了選做環節新增依賴或服務。

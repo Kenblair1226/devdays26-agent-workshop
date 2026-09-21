@@ -17,8 +17,9 @@ answering questions about Foundry agents, read the microsoft-foundry skill first
 - Lab 2 uses one harness factory connection and the local user/admin budget demo.
   Keep its user tools scoped; never expose approval to the model or host the demo
   approval API as a production/Foundry authorization service.
-- Lab 3 adds Foundry model switching; keep Toolbox and other new services out of
-  scope. Preserve the optional Hosted deployment and the Azure-free Lab 1/2 path.
+- Lab 2 may optionally switch the same harness to a Foundry model. Lab 3 is the
+  optional Hosted Agent deployment. Keep Toolbox and other new services out of
+  scope, and preserve the Azure-free Lab 1/2 core path.
 
 ## Validation
 
