@@ -324,6 +324,22 @@ def test_responses_cancellation_cleans_up_harness(hosted, monkeypatch):
     asyncio.run(run())
 
 
+@pytest.mark.parametrize("project", ["solution", "starter"])
+def test_hosted_manifest_uses_astra_and_explicit_deployment_binding(project):
+    root = Path(__file__).parents[2]
+    config = (root / project / "azure.yaml").read_text()
+    model = re.search(
+        r'- name: (\S+)\s+model:\s+format: OpenAI\s+name: (\S+)\s+version: "([^"]+)"',
+        config,
+    )
+    assert model is not None
+    assert model.groups() == ("gpt-6-astra", "gpt-6-astra", "2026-09-03")
+    assert "MODEL_NAME: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}" in config
+    assert "FINOPS_MODEL_PROVIDER: foundry-identity" in config
+    assert "FINOPS_BACKEND: mock" in config
+    assert "FINOPS_OTEL_EXPORTER: azure-monitor" in config
+
+
 def test_hosted_entrypoints_and_protocol_dependencies_stay_in_sync():
     root = Path(__file__).parents[2]
     assert (root / "starter/main.py").read_bytes() == (

@@ -9,11 +9,11 @@ services:
   ai-project:
     host: azure.ai.project
     deployments:
-      - name: gpt-5.4-mini
+      - name: gpt-6-astra
         model:
           format: OpenAI
-          name: gpt-5.4-mini
-          version: "2026-03-17"
+          name: gpt-6-astra
+          version: "2026-09-03"
         sku:
           name: GlobalStandard
           capacity: 10

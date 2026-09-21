@@ -90,7 +90,7 @@ python -m finops_agent ask "目前本月的範例費用是多少？"
 export FINOPS_MODEL_PROVIDER=copilot
 read -rsp "Workshop Copilot token: " COPILOT_GITHUB_TOKEN; printf '\n'
 export COPILOT_GITHUB_TOKEN
-export COPILOT_MODEL=gpt-5
+export COPILOT_MODEL=gpt-6-astra
 python -m finops_agent ask "目前本月的範例費用是多少？"
 ```
 
@@ -135,6 +135,9 @@ Lab 3 的 identity 路線使用 `FINOPS_MODEL_PROVIDER=foundry-identity`、`AZUR
 `AZURE_OPENAI_ENDPOINT` 接受 HTTPS 資源根網址（例如 `https://<resource>.openai.azure.com`）、Foundry project 根 endpoint（`https://<account>.services.ai.azure.com/api/projects/<project>`），或上述網址的 `/openai/v1/` base URL。不要填 `/responses`、`/chat/completions`、deployment 路徑或 Hosted Agent invoke endpoint，也不要在 URL 放 key 或 query string。
 
 Hosted 部署時，`azure.yaml` 會把 azd 的 `AZURE_AI_MODEL_DEPLOYMENT_NAME` 對應到應用程式的 `MODEL_NAME`。若未另設 `AZURE_OPENAI_ENDPOINT`，harness 可使用平台注入的 `FOUNDRY_PROJECT_ENDPOINT`。
+目前 Hosted manifest 預設模型為 `gpt-6-astra`，model version 以 `azure.yaml` 為準。
+既有 azd environment 不會自動跟著 YAML 或本機 `.env` 換模型；
+先確認實際 deployment，再依[Hosted 部署說明](hosted-deployment.md#這次部署什麼)同步綁定。
 
 第一次設定請直接使用本節提供的變數名稱。若出現「舊 Foundry 設定遷移提醒」，再依[疑難排解](troubleshooting.md)更新既有設定；請勿混用新 endpoint 與舊 key。
 
