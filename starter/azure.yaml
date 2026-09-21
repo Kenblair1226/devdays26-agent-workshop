@@ -31,6 +31,8 @@ services:
     displayName: Copilot FinOps Agent
     description: Analyze GitHub Copilot AI-credit cost and usage using workshop data.
     protocols:
+      - protocol: responses
+        version: 2.0.0
       - protocol: invocations
         version: 2.0.0
     env:

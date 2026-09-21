@@ -88,20 +88,23 @@ GitHub billing fixture 是被分析的資料；Azure inference 是 Agent 自己�
 ```mermaid
 flowchart LR
     Caller["學員 / 講師"] --> Endpoint["Foundry managed endpoint"]
-    Endpoint --> Host["main.py / InvocationAgentServerHost"]
+    Endpoint --> Host["main.py / FinOpsAgentServerHost"]
+    Host --> Protocols["Invocations + Responses adapters"]
     Host --> Harness["CopilotFinOpsHarness"]
     Harness --> SDK["SDK auto-managed runtime"]
     SDK --> Model["預建 Foundry model"]
     Identity["Managed Identity"] --> Model
     SDK --> Tools["本次 invocation 的 FinOpsToolbox"]
     Tools --> Fixture["打包的 synthetic data"]
-    Host --> Reply["reply + invocation_id + tool_calls"]
+    Host --> Reply["Invocations JSON / Responses JSON or SSE"]
     Host --> Logs["Host / tool logs"]
 ```
 
-`azure.yaml` 選擇 `host: azure.ai.agent`、`runtime: python_3_13`、`entryPoint: main.py`、`protocol: invocations`。YAML 的 `container.resources` 是平台執行資源大小，不表示需要另一個自建 container。
+`azure.yaml` 選擇 `host: azure.ai.agent`、`runtime: python_3_13`、`entryPoint: main.py`，同時宣告 `responses` 與 `invocations`。`FinOpsAgentServerHost` 依 SDK 的 cooperative inheritance 組合 `InvocationAgentServerHost` 與 `ResponsesAgentServerHost`，共用同一個 listener 與 readiness。YAML 的 `container.resources` 是平台執行資源大小，不表示需要另一個自建 container。
 
-`main.py` 接收 `{"input":"..."}`，以同一個 local harness 完成呼叫，回傳 JSON。失敗／逾時回傳非成功 HTTP status，不會在 model error 後輸出 completed。每次 request 各自建立 session、toolbox 和 runtime state，完成後清理；這是簡化的 workshop 隔離方案，不提供跨 request memory 或 remote approval。
+Invocations 接收 `{"input":"..."}`，保留原本的 JSON contract 與 503／504 失敗 status。Responses 接收文字／文字 message list，供 Playground 使用；SDK 產生標準 Responses JSON 或 SSE。模型完整回答後才輸出文字；失敗／逾時回傳 `status=failed`／`response.failed`，不會在 model error 後輸出 completed。Responses HTTP 200 不等於模型成功。
+
+兩條路徑都呼叫同一個 local harness helper，限定每次純文字 1–8,000 字元及 150 秒 timeout。每次 request 各自建立 mock client、session、toolbox 和 runtime state，完成／取消後清理；Responses 只讀本次輸入，不載入 conversation history。這是簡化的 workshop 隔離方案，不提供跨 request memory 或 remote approval。
 
 ## 模型、資料、寫入權限分開
 
@@ -154,7 +157,7 @@ Real billing endpoint 回傳的是報表，不是即時 meter；`retrieved_at` �
 - [Copilot SDK 與官方範例](https://github.com/github/copilot-sdk)
 - [SDK isolation / multi-tenancy](https://github.com/github/copilot-sdk/blob/main/docs/setup/multi-tenancy.md)
 - [SDK Foundry model provider / BYOK](https://github.com/github/copilot-sdk/blob/main/docs/auth/byok.md)
-- [Foundry invocations adapter](https://learn.microsoft.com/azure/foundry/agents/how-to/add-protocol-adapter)
+- [Foundry protocol adapters](https://learn.microsoft.com/azure/foundry/agents/how-to/add-protocol-adapter)
 - [Foundry code deployment](https://learn.microsoft.com/azure/foundry/agents/quickstarts/quickstart-deploy-own-code)
 - [GitHub AI-credit billing usage](https://docs.github.com/en/rest/billing/usage)
 - [Copilot usage report APIs](https://docs.github.com/en/rest/copilot/copilot-usage-metrics)

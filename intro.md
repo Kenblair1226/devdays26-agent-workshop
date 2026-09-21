@@ -22,7 +22,7 @@
 - 調查後才讀 `options`，從修正重複觸發、簡單任務換模型、暫時提高預算中**選兩個**；比較 owner、品質 gate、同期間效果與不選理由，headroom 不是節省。`forecast 600` 的 47,600 credits／USD 448.80 是歷史 run-rate，不是保證
 - 完成摘要後才匯出調查 evidence，選做由 Agent 建立單一 HTML，練習「圖表也要對得回證據」
 - 練習 human-in-the-loop mock governance boundary
-- 了解 official Foundry direct-code shape：`azure.yaml` + `main.py` + `InvocationAgentServerHost`
+- 了解 official Foundry direct-code shape：`azure.yaml` + `main.py`，組合 `InvocationAgentServerHost` 與 `ResponsesAgentServerHost`
 - Foundry 擴充只加入模型來源切換，不增加 Toolbox 或其他服務；工具與核准流程維持不變
 - 知道 `solution/` 是答案與 recovery，不是主要操作路徑
 
@@ -87,7 +87,7 @@ This workshop has exactly three labs. Progress through the core outcomes, with o
 - Pre-event setup should install `starter/requirements.txt` into `starter/.venv` and pre-cache `python -m copilot download-runtime`
 - Lab 1 analysis uses signed-in VS Code Copilot Chat; Lab 2 uses the local SDK harness with Copilot auth or organizer BYOK. Neither requires Azure hosting
 - Lab 2 exposes only `get_my_costs`, `get_my_savings`, and `request_budget_increase`, not organization workflow data or approval. Use the migration plan to rehearse 150/102.67/47.33 → human approval → 220/102.67/117.33. The extra USD 70 is headroom, not savings; mock expiry metadata is not an automatic reversion timer
-- Optional Hosted deployment uses `starter/azure.yaml`, `starter/main.py`, and `InvocationAgentServerHost`, and requires **azd >= 1.27.1**; the model-only step runs in the local demo
+- Optional Hosted deployment uses `starter/azure.yaml`, `starter/main.py`, and a combined Invocations/Responses host, and requires **azd >= 1.27.1**; the model-only step runs in the local demo
 - The only new Foundry integration is the model provider; Toolbox and additional services are out of scope. Using a Foundry model locally does not require agent hosting or azd
 
 ### Prerequisites

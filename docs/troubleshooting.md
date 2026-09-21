@@ -78,6 +78,9 @@
 | 找不到 azd environment | 主辦方未完成個人 environment 綁定；不要在現場新建資源或反覆 init |
 | `azd` 版本太舊 | 課前更新到 YAML 要求；本機 Lab 1/2 不受影響 |
 | remote request body 無效 | 使用 `request.example.json` 與 `--protocol invocations -f`，不要傳裸字串或 UTF-16 JSON |
+| Playground 顯示 `input must be 1-8000 characters` | 舊 Invocations handler 把格式錯誤也顯示為字數錯誤；不一定是問題太長。重新部署雙 protocol 版本，選新版本的 `responses` 並建立新聊天；JSON API 仍明確選 `invocations`，見 [Hosted 部署](hosted-deployment.md#使用-playgroundresponses) |
+| Responses HTTP 200 但沒有成功回答 | 檢查 JSON 的 `status`／`error` 或 SSE 的 `response.failed`；這些是 protocol 內的失敗，不是成功答案。依 response ID 檢查對應 session logs |
+| Playground 不記得上一題 | 本 workshop 的兩種 protocols 都使用每次 request 獨立的 harness／mock 狀態，不載入歷史；每題提供完整條件，不以聊天記錄當作跨 request memory |
 | `azd ai agent monitor` 結束了 | 預設只抓近期 logs；需要持續串流才加 `--follow` |
 | 真實用量與目前 seats 合計不相等 | 已移除使用者／歸屬／時間可能不同；以 organization totals 為準並檢視 residual，不丟掉差額 |
 
