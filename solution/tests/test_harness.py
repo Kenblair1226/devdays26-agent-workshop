@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from contextlib import AsyncExitStack
 from pathlib import Path
 from types import SimpleNamespace
@@ -33,6 +34,8 @@ def clean_model_settings(monkeypatch):
         "COPILOT_MODEL",
         "FOUNDRY_PROJECT_ENDPOINT",
         "AZURE_AI_MODEL_DEPLOYMENT_NAME",
+        "FINOPS_OTEL_FILE",
+        "FINOPS_OTEL_EXPORTER",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -146,6 +149,69 @@ def test_model_failure_is_not_reported_as_success(runtime) -> None:
     assert runtime["deleted"] == ["fake-session"]
 
 
+def test_runtime_telemetry_is_opt_in(runtime, monkeypatch):
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "https://collector.example.test")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_HEADERS", "authorization=private-token")
+    monkeypatch.setenv("COPILOT_OTEL_ENABLED", "true")
+    monkeypatch.setenv("OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT", "true")
+    harness = CopilotFinOpsHarness(FinOpsToolbox(MockGitHubFinOpsClient()))
+    asyncio.run(harness.ask("hello"))
+    client = runtime["clients"][0]
+    assert client["telemetry"] is None
+    assert not any("OTEL" in key for key in client["env"])
+
+
+def test_runtime_file_telemetry_is_metadata_only(runtime, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("FINOPS_OTEL_FILE", "workshop-output/copilot-trace.jsonl")
+    monkeypatch.setenv("OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT", "true")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "https://collector.example.test")
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "must-not-reach-runtime")
+    harness = CopilotFinOpsHarness(FinOpsToolbox(MockGitHubFinOpsClient()))
+    asyncio.run(harness.ask("hello"))
+    client = runtime["clients"][0]
+    path = tmp_path / "workshop-output/copilot-trace.jsonl"
+    assert client["telemetry"] == {
+        "exporter_type": "file",
+        "file_path": str(path),
+        "source_name": "finops-agent",
+        "capture_content": False,
+    }
+    assert path.is_file()
+    if os.name == "posix":
+        assert path.stat().st_mode & 0o077 == 0
+    assert "GITHUB_ADMIN_TOKEN" not in client["env"]
+    assert "AZURE_OPENAI_API_KEY" not in client["env"]
+    assert not any("OTEL" in key for key in client["env"])
+    assert runtime["client_closed"]
+
+
+def test_runtime_telemetry_preserves_existing_file(runtime, monkeypatch, tmp_path):
+    path = tmp_path / "trace.jsonl"
+    path.write_text('{"existing":true}\n', encoding="utf-8")
+    monkeypatch.setenv("FINOPS_OTEL_FILE", str(path))
+    harness = CopilotFinOpsHarness(FinOpsToolbox(MockGitHubFinOpsClient()))
+    asyncio.run(harness.ask("hello"))
+    assert path.read_text(encoding="utf-8") == '{"existing":true}\n'
+
+
+@pytest.mark.parametrize("value", [" ", "\t"])
+def test_runtime_telemetry_rejects_blank_path(runtime, monkeypatch, value):
+    monkeypatch.setenv("FINOPS_OTEL_FILE", value)
+    harness = CopilotFinOpsHarness(FinOpsToolbox(MockGitHubFinOpsClient()))
+    with pytest.raises(ValueError, match="FINOPS_OTEL_FILE"):
+        asyncio.run(harness.ask("hello"))
+    assert not runtime["clients"]
+
+
+def test_runtime_telemetry_rejects_unwritable_target(runtime, monkeypatch, tmp_path):
+    monkeypatch.setenv("FINOPS_OTEL_FILE", str(tmp_path))
+    harness = CopilotFinOpsHarness(FinOpsToolbox(MockGitHubFinOpsClient()))
+    with pytest.raises(OSError):
+        asyncio.run(harness.ask("hello"))
+    assert not runtime["clients"]
+
+
 def test_timeout_aborts_and_unsubscribes(runtime) -> None:
     harness = CopilotFinOpsHarness(
         FinOpsToolbox(MockGitHubFinOpsClient()), timeout_seconds=0.05
@@ -154,6 +220,51 @@ def test_timeout_aborts_and_unsubscribes(runtime) -> None:
         asyncio.run(harness.ask("timeout"))
     assert runtime["aborted"] == 1
     assert runtime["unsub"] == 1
+
+
+@pytest.mark.parametrize("prompt", ["hello", "error", "timeout", "cancel"])
+def test_cloud_telemetry_exports_after_runtime_exit_and_removes_buffer(
+    runtime, monkeypatch, prompt
+) -> None:
+    from finops_agent import telemetry
+
+    monkeypatch.setenv("FINOPS_OTEL_EXPORTER", "azure-monitor")
+    monkeypatch.setenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "synthetic-connection")
+    paths = []
+
+    async def flush(path, connection, auth_mode):
+        assert runtime["client_closed"]
+        assert path.is_file()
+        assert connection == "synthetic-connection"
+        assert auth_mode == ""
+        paths.append(path)
+
+    monkeypatch.setattr(telemetry, "_flush_cloud", flush)
+    harness = CopilotFinOpsHarness(
+        FinOpsToolbox(MockGitHubFinOpsClient()), timeout_seconds=0.05
+    )
+
+    async def run():
+        if prompt == "cancel":
+            task = asyncio.create_task(harness.ask("timeout"))
+            await asyncio.sleep(0.01)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+        elif prompt in ("error", "timeout"):
+            with pytest.raises(RuntimeError if prompt == "error" else TimeoutError):
+                await harness.ask(prompt)
+        else:
+            assert await harness.ask(prompt) == "AI Lab: 17600"
+
+    asyncio.run(run())
+    assert len(paths) == 1
+    assert not paths[0].parent.exists()
+    client = runtime["clients"][0]
+    assert client["telemetry"]["capture_content"] is False
+    assert client["telemetry"]["file_path"] == str(paths[0])
+    assert "APPLICATIONINSIGHTS_CONNECTION_STRING" not in client["env"]
+    assert "FINOPS_OTEL_EXPORTER" not in client["env"]
 
 
 def test_no_token_does_not_silently_use_host_credentials(monkeypatch) -> None:

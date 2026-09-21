@@ -1,7 +1,9 @@
 azure-ai-agentserver-invocations==1.1.0
 azure-ai-agentserver-responses==2.1.0
 azure-identity>=1.17,<2
+azure-monitor-opentelemetry-exporter==1.0.0b57
 github-copilot-sdk==1.0.11
+opentelemetry-sdk==1.44.0
 pytest>=8.3,<9
 python-dotenv==1.1.1
 starlette>=0.47,<2

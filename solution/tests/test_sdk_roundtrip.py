@@ -7,7 +7,11 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
+from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace.export import SpanExportResult
 
+from finops_agent import telemetry
 from finops_agent.clients import MockGitHubFinOpsClient
 from finops_agent.harness import CopilotFinOpsHarness
 from finops_agent.tools import FinOpsToolbox
@@ -17,6 +21,7 @@ from finops_agent.tools import FinOpsToolbox
     os.getenv("FINOPS_TEST_RUNTIME") != "1",
     reason="Set FINOPS_TEST_RUNTIME=1 after downloading the SDK-pinned runtime",
 )
+@pytest.mark.parametrize("destination", ["file", "azure-monitor"])
 @pytest.mark.parametrize(
     "operation,arguments",
     [
@@ -51,8 +56,35 @@ from finops_agent.tools import FinOpsToolbox
     ],
 )
 def test_real_sdk_calls_finops_tool_without_cloud_credentials(
-    monkeypatch, operation, arguments
+    monkeypatch, tmp_path, operation, arguments, destination
 ):
+    telemetry_path = tmp_path / "copilot-trace.jsonl"
+    monkeypatch.setenv("FINOPS_OTEL_FILE", str(telemetry_path))
+    monkeypatch.delenv("FINOPS_OTEL_EXPORTER", raising=False)
+    exported = []
+    cloud_paths = []
+
+    class Exporter:
+        def export(self, batch):
+            exported.extend(batch)
+            return SpanExportResult.SUCCESS
+
+    monkeypatch.setattr(telemetry, "_azure_exporter", lambda *_: Exporter())
+    if destination == "azure-monitor":
+        monkeypatch.delenv("FINOPS_OTEL_FILE")
+        monkeypatch.setenv("FINOPS_OTEL_EXPORTER", "azure-monitor")
+        monkeypatch.setenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "synthetic")
+        monkeypatch.delenv("APPLICATIONINSIGHTS_AUTH_MODE", raising=False)
+        flush = telemetry._flush_cloud
+
+        async def capture_buffer(path, connection, auth_mode):
+            cloud_paths.append(path)
+            telemetry_path.write_bytes(path.read_bytes())
+            await flush(path, connection, auth_mode)
+
+        monkeypatch.setattr(telemetry, "_flush_cloud", capture_buffer)
+    trace_id = 0x0123456789ABCDEF0123456789ABCDEF
+    parent_id = 0x0123456789ABCDEF
     observed = {"requests": 0, "tool_result": None, "tools": []}
     actions = (
         [
@@ -126,6 +158,11 @@ def test_real_sdk_calls_finops_tool_without_cloud_credentials(
                         "object": "chat.completion.chunk",
                         "model": "gpt-5",
                         "choices": [{"index": 0, "delta": {}, "finish_reason": reason}],
+                        "usage": {
+                            "prompt_tokens": 1,
+                            "completion_tokens": 1,
+                            "total_tokens": 2,
+                        },
                     },
                 ]
                 payload = "".join(f"data: {json.dumps(c)}\n\n" for c in chunks)
@@ -184,9 +221,97 @@ def test_real_sdk_calls_finops_tool_without_cloud_credentials(
             harness = build_demo_harness(service)
         else:
             harness = CopilotFinOpsHarness(toolbox, timeout_seconds=45)
-        answer = asyncio.run(harness.ask("Which department used the most AI credits?"))
+        prompt = "Which department used the most AI credits?"
+        parent = trace.NonRecordingSpan(
+            trace.SpanContext(
+                trace_id=trace_id,
+                span_id=parent_id,
+                is_remote=False,
+                trace_flags=trace.TraceFlags(trace.TraceFlags.SAMPLED),
+            )
+        )
+        with trace.use_span(parent):
+            answer = asyncio.run(harness.ask(prompt))
         assert answer == "FinOps tool result recorded."
         assert observed["requests"] >= 2
+        raw_trace = telemetry_path.read_text(encoding="utf-8")
+        spans = [
+            entry
+            for line in raw_trace.splitlines()
+            if (entry := json.loads(line)).get("type") == "span"
+        ]
+        assert spans
+        assert all(
+            span["instrumentationScope"]["name"] == "finops-agent" for span in spans
+        )
+        operations = {span["attributes"].get("gen_ai.operation.name") for span in spans}
+        assert {"invoke_agent", "chat", "execute_tool"} <= operations
+        assert all(span["traceId"] == f"{trace_id:032x}" for span in spans)
+        invocation = next(
+            span
+            for span in spans
+            if span["attributes"].get("gen_ai.operation.name") == "invoke_agent"
+        )
+        assert invocation["parentSpanId"] == f"{parent_id:016x}"
+        chat_spans = [
+            span
+            for span in spans
+            if span["attributes"].get("gen_ai.operation.name") == "chat"
+        ]
+        assert len(chat_spans) == len(actions) + 1
+        for span in chat_spans:
+            assert span["parentSpanId"] == invocation["spanId"]
+            assert span["attributes"]["gen_ai.usage.input_tokens"] == 1
+            assert span["attributes"]["gen_ai.usage.output_tokens"] == 1
+        tool_spans = [
+            span
+            for span in spans
+            if span["attributes"].get("gen_ai.operation.name") == "execute_tool"
+        ]
+        assert any(
+            span["attributes"]["gen_ai.tool.name"].endswith(actions[0][0])
+            for span in tool_spans
+        )
+        assert all(span["parentSpanId"] == invocation["spanId"] for span in tool_spans)
+        for span in spans:
+            assert span["endTime"] >= span["startTime"]
+            assert (
+                not {
+                    "gen_ai.input.messages",
+                    "gen_ai.output.messages",
+                    "gen_ai.tool.call.arguments",
+                    "gen_ai.tool.call.result",
+                }
+                & span["attributes"].keys()
+            )
+        assert prompt not in raw_trace
+        assert answer not in raw_trace
+        assert "synthetic-local-only" not in raw_trace
+        converted = telemetry.read_runtime_spans(
+            telemetry_path, Resource({"service.name": "test-host"})
+        )
+        assert len(converted) == len(spans)
+        for original, span in zip(spans, converted, strict=True):
+            assert span.context.trace_id == int(original["traceId"], 16)
+            assert span.context.span_id == int(original["spanId"], 16)
+            assert span.parent.span_id == int(original["parentSpanId"], 16)
+            assert span.resource.attributes["service.name"] == "test-host"
+            assert (
+                span.attributes["gen_ai.conversation.id"]
+                == (original["attributes"]["gen_ai.conversation.id"])
+            )
+            assert "synthetic-local-only" not in span.to_json()
+            assert prompt not in span.to_json()
+            assert answer not in span.to_json()
+
+        if destination == "azure-monitor":
+            assert len(cloud_paths) == 1
+            assert not cloud_paths[0].parent.exists()
+        else:
+            asyncio.run(telemetry._flush_cloud(telemetry_path, "synthetic", ""))
+        assert [span.context for span in exported] == [
+            span.context for span in converted
+        ]
         if personal:
             assert "alice" not in str(observed["tool_result"])
             if operation == "request_budget_increase":

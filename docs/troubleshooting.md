@@ -84,6 +84,98 @@
 | `azd ai agent monitor` 結束了 | 預設只抓近期 logs；需要持續串流才加 `--follow` |
 | 真實用量與目前 seats 合計不相等 | 已移除使用者／歸屬／時間可能不同；以 organization totals 為準並檢視 residual，不丟掉差額 |
 
+## 選配：本機 OpenTelemetry trace 檔
+
+這是講師／維護者的本機診斷選項，不是 Lab 1/2 的必要步驟，也不新增 collector 或 Azure 服務。
+在已完成 SDK 接線與認證的環境，於 `starter/.env` 設定：
+
+```dotenv
+FINOPS_OTEL_FILE=workshop-output/copilot-trace.jsonl
+```
+
+停止並重新啟動 `ask`、`chat` 或 `demo`，再送出一題會呼叫工具的問題。
+相對路徑以**啟動程序的 working directory** 為準；需要固定位置時使用絕對路徑。
+Harness 建立父目錄並檢查檔案可寫，runtime 以 JSON Lines 追加，不清空已有紀錄。
+完整結果請在該次 SDK session 正常結束後查看；長時間開啟的 demo／chat 可能還有 spans 尚未結束。
+設為空字串或移除變數後重啟，即關閉這個 runtime exporter。
+
+可以在檔案中找：
+
+| 欄位／span | 用途 |
+| --- | --- |
+| `type=span`、`gen_ai.operation.name=invoke_agent` | 本次 agent turn |
+| `gen_ai.operation.name=chat` | 模型互動；通常有 model、input/output tokens，依模型實際提供的 usage 為準 |
+| `gen_ai.operation.name=execute_tool` | 工具名稱、call ID 與執行狀態 |
+| `traceId`、`spanId`、`parentSpanId` | 還原同一條 trace 的父子關係 |
+| `startTime`、`endTime` | 耗時；格式是 `[seconds, nanoseconds]` |
+
+檔案依 span 完成／匯出時間追加，不保證是開始時間順序，也可能包含 metrics 等非 span 紀錄。
+`capture_content` 固定為 `false`：不開啟 prompt、回答或工具參數／結果的內容錄製。
+仍可能包含模型／工具名稱、識別碼、endpoint metadata 等診斷資訊，不能當作完全匿名資料；
+只在授權的本機除錯情境使用，不提交或任意上傳。建議路徑 `workshop-output/` 已被 Git 忽略。
+這個設定不放寬 runtime 的 credential allowlist，也不把 `OTEL_*` 或 App Insights 設定整包傳給 runtime。
+
+**本機 JSONL 不會自動顯示在 Foundry Traces。** Foundry host 的 Application Insights exporter
+和 Copilot runtime 的 file／OTLP exporter 是不同的管線；connection string 不能直接當作 OTLP endpoint。
+本選項不修改 Hosted 部署設定，也不宣稱完成雲端 telemetry 匯出。
+
+### Hosted：批次匯出到 Foundry Traces
+
+`azure.yaml` 的 hosted service 設定 `FINOPS_OTEL_EXPORTER=azure-monitor`；
+本機 `.env.example` 預設留空，不影響 Azure-free Lab 1/2。
+需要 project 已連結 Application Insights，並由平台注入
+`APPLICATIONINSIGHTS_CONNECTION_STRING`。不要把 connection string 寫進 manifest 或 runtime 環境。
+不能同時設定 `FINOPS_OTEL_FILE`：避免把本機累積檔案或舊 request 的 spans 上傳。
+不合法的 exporter、缺少 connection string 或互斥設定會明確拒絕啟動 conversation。
+
+每次 conversation 使用獨立暫存檔；Hosted 每個 request 就是一個 conversation。
+runtime 關閉／flush 後才轉換及批次匯出，因此不是即時 token 串流，也不提供隱藏的模型推理內容。
+保留原始 IDs、時間、status code、模型／工具與 token usage metadata，
+沿用 host 的 service resource／可用 agent metadata，讓 spans 能接回同一 trace。
+除了 `capture_content=false`，bridge 還會過濾 attributes 並丟棄 events 和錯誤描述，
+不送 prompt、回答、工具參數／結果；名稱及識別碼仍不是匿名資料。
+Native metrics records 不匯出；usage 來自 spans，不可當作帳單。
+
+Exporter 在 worker thread 執行，重用 process 級 instance，連線／讀取 timeout 各 5 秒、
+不自動重試；這不是整個 request 的嚴格 5 秒上限。
+`APPLICATIONINSIGHTS_AUTH_MODE=entra` 與 host 一樣使用 system-assigned Managed Identity；
+其餘使用 Azure Monitor SDK 的 connection string／標準 authentication 設定。
+不新增 collector、不改 host 全域 tracing，不擴大 runtime credential allowlist。
+匯出成功記錄 `Copilot runtime trace export succeeded; spans=...`；
+失敗記錄 `Copilot runtime trace export failed`，buffer 損壞／超限記錄
+`Copilot trace buffer rejected`，沒有完整 span 則記錄 warning。
+診斷不包含原始 buffer 或 credentials；telemetry 失敗不偽裝成匯出成功，也不丟棄已完成的模型回答。
+bridge 最多讀取 8 MiB／2048 spans，超限整批拒絕。
+成功、失敗、timeout 或取消均透過 harness cleanup 清除暫存目錄；
+中止程序可能來不及 flush／送達。取消時已開始的 network export 可能在 thread 繼續完成。
+離線重送 storage 關閉，失敗不保證重送或送達。
+
+只看到 host／HTTP spans 時，先檢查部署版本是否包含 bridge、開關與本次 session 的 exporter log。
+再於 Portal 用同一 trace ID 檢查 `chat ...`／`execute_tool ...`，並留意 ingestion 延遲。
+成功回答／成功匯出 log 不等於 Portal 可見性已驗證；查詢共用 Application Insights 需另取得授權。
+
+### 無雲端憑證的維護者驗證
+
+先依既有準備步驟安裝 solution 的依賴並下載 SDK-pinned runtime，再使用 Python 3.13。
+從 repo root 執行：
+
+```bash
+FINOPS_TEST_RUNTIME=1 python -m pytest solution/tests/test_sdk_roundtrip.py -q
+```
+
+PowerShell：
+
+```powershell
+$env:FINOPS_TEST_RUNTIME = "1"
+python -m pytest .\solution\tests\test_sdk_roundtrip.py -q
+```
+
+這組測試使用**真實 Copilot SDK/runtime + localhost 假模型 + mock 工具**，
+檢查模型／工具 spans、trace context、usage 欄位及內容未錄製；JSONL 寫入 pytest 的暫存目錄。
+同時測試本機檔案與 Hosted 暫存 bridge 兩種模式，雲端 exporter 由記憶體測試替身取代，
+確認轉換後的原始 IDs／父子關係、span 數量及暫存檔清理，不連接 Application Insights。
+假模型的 token usage 是測試值，不是 Azure／GitHub 真實用量或費用，也不算 Hosted 部署成功。
+
 ## 有備份的 recovery
 
 從 repo root 執行：

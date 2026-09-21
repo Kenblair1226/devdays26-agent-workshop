@@ -102,6 +102,19 @@ Responses 回傳 `status=failed`／`response.failed`，不可把 HTTP 200 或收
 對照課程資料及工具名稱；只有 HTTP `/readiness` 成功，不代表模型認證或呼叫成功。
 
 `monitor` 預設讀近期 console logs，持續看才加 `--follow`；這不是完整 token trace。
+要先確認 Copilot runtime 的模型／工具 spans，可選做[本機 OpenTelemetry trace 檔](troubleshooting.md#選配本機-opentelemetry-trace-檔)；
+它不需要新增服務，但 JSONL 不會自動顯示在 Foundry Traces，也不代表雲端 exporter 已接通。
+Hosted manifest 現在明確設定 `FINOPS_OTEL_EXPORTER=azure-monitor`，以平台注入的
+`APPLICATIONINSIGHTS_CONNECTION_STRING` 批次匯出 runtime spans 到既有 Application Insights。
+部署前確認 project 已連結 Application Insights；若沒有，請先由資源擁有者設定，
+或移除 manifest 的此項設定，只保留既有 host tracing。
+這不新增 Azure 服務、不傳遞 connection string 給 runtime，也不啟用內容錄製。
+`APPLICATIONINSIGHTS_AUTH_MODE=entra` 時使用 system-assigned Managed Identity，
+需要對該 Application Insights 有既定的 telemetry 寫入權限；程式不自動授權。
+在本次 session logs 找 `Copilot runtime trace export succeeded; spans=...`，
+再以同一 trace ID 到 Portal 檢查 `chat ...`／`execute_tool ...`。
+成功回答或成功匯出 log 不等於 Portal 已完成索引；查詢共用 telemetry 前須取得授權。
+限制及故障處理見 [Hosted 批次匯出](troubleshooting.md#hosted批次匯出到-foundry-traces)。
 部署或模型失敗要如實記錄，改看講師示範，不把觀摩說成自行部署完成。
 Azure 推論與 hosting 費用另計，mock GitHub budget 不會限制它們。
 

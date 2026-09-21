@@ -83,6 +83,32 @@ Endpoint 可以是 resource/project 根網址，或已包含 `/openai/v1/` 的 b
 
 GitHub billing fixture 是被分析的資料；Azure inference 是 Agent 自己產生的費用，兩者分開。`FINOPS_BACKEND=mock` 與 `FINOPS_ALLOW_REAL_WRITES=false` 在換模型時不變。
 
+### 選配的本機 runtime tracing
+
+`FINOPS_OTEL_FILE` 非空時，harness 透過 Copilot SDK 的 `telemetry` 設定啟用 JSONL file exporter，
+固定 `capture_content=false`，記錄模型／工具 spans 與可用的 usage metadata。
+Python 端已有有效 OTel context 時，SDK 會透過 JSON-RPC 將 trace context 傳入 runtime。
+不新增服務、不傳遞整份環境變數，也不改變工具 allowlist；預設關閉。
+這是獨立於 Foundry host Application Insights exporter 的本機診斷管線，
+不會自動把 runtime spans 上傳到 Foundry，操作與限制見 [本機 trace 檔](troubleshooting.md#選配本機-opentelemetry-trace-檔)。
+
+### Hosted runtime spans 的批次匯出
+
+Hosted manifest 另設 `FINOPS_OTEL_EXPORTER=azure-monitor`，使用平台注入的
+`APPLICATIONINSIGHTS_CONNECTION_STRING`；本機 `.env.example` 留空，Lab 1/2 不需要 Azure。
+runtime 先寫入每次 conversation 專用的私有暫存 JSONL，client 關閉並 flush 後，
+Python 將原始 trace/span/parent IDs、時間、模型／工具名稱、usage 與 status code
+轉成 OTel `ReadableSpan`，以 Azure Monitor exporter 批次送到既有 Application Insights。
+沿用 host resource 與可用的 agent／conversation metadata，不重設全域 tracer provider，
+也不新增 collector。Host conversation ID 若覆蓋 runtime ID，後者保留在
+`github.copilot.conversation.id`。
+
+雲端匯出只保留明確允許的 attributes；不轉送 events、status description、
+prompt、回答、工具參數／結果或 tool definitions。此管線匯出 spans 與 span 上的 usage，
+不是所有 runtime metrics，也不提供模型的隱藏推理內容。
+暫存檔在匯出嘗試後隨 conversation 清除，失敗不存離線重送檔；
+詳見 [Hosted 批次匯出](troubleshooting.md#hosted批次匯出到-foundry-traces)。
+
 ## Foundry：相同 harness，獨立 request state
 
 ```mermaid

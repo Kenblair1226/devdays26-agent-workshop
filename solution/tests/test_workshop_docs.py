@@ -276,6 +276,36 @@ def test_hosted_reference_retains_safe_deployment_and_failure_handling() -> None
         assert required in text
 
 
+def test_local_telemetry_is_optional_and_not_claimed_as_cloud_export() -> None:
+    text = (ROOT / "docs" / "troubleshooting.md").read_text(encoding="utf-8")
+    for required in (
+        "FINOPS_OTEL_FILE",
+        "capture_content",
+        "本機 JSONL 不會自動顯示在 Foundry Traces",
+        "localhost 假模型",
+        "不是 Azure／GitHub 真實用量",
+        "traceId",
+        "execute_tool",
+    ):
+        assert required in text
+    for project in ("starter", "solution"):
+        example = (ROOT / project / ".env.example").read_text(encoding="utf-8")
+        assert "\nFINOPS_OTEL_FILE=\n" in example
+        assert "\nFINOPS_OTEL_EXPORTER=\n" in example
+        config = (ROOT / project / "azure.yaml").read_text(encoding="utf-8")
+        assert "FINOPS_OTEL_FILE" not in config
+        assert "FINOPS_OTEL_EXPORTER: azure-monitor" in config
+    for required in (
+        "APPLICATIONINSIGHTS_CONNECTION_STRING",
+        "APPLICATIONINSIGHTS_AUTH_MODE=entra",
+        "Copilot runtime trace export succeeded",
+        "Copilot runtime trace export failed",
+        "2048 spans",
+        "查詢共用 Application Insights 需另取得授權",
+    ):
+        assert required in text
+
+
 def test_detailed_references_keep_current_financial_and_case_evidence() -> None:
     data_notes = (ROOT / "data" / "README.md").read_text(encoding="utf-8")
     rows = markdown_table_rows(data_notes.replace(",", ""))

@@ -29,6 +29,7 @@ from copilot.tools import Tool
 
 from .instructions import FINOPS_AGENT_INSTRUCTIONS
 from .sdk_tools import build_sdk_tools
+from .telemetry import runtime_telemetry
 from .tools import FinOpsToolbox
 
 logger = logging.getLogger(__name__)
@@ -97,6 +98,7 @@ class CopilotFinOpsHarness:
                 github_token=token if provider is None else None,
                 use_logged_in_user=False,
                 env=_runtime_environment(),
+                telemetry=runtime_telemetry(stack, home),
             )
             async with asyncio.timeout(self.timeout_seconds):
                 await stack.enter_async_context(client)
