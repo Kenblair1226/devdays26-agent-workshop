@@ -97,7 +97,7 @@ python -m finops_agent ask "目前本月的範例費用是多少？"
 
 ```bash
 export FINOPS_MODEL_PROVIDER=copilot
-read -rsp "Workshop Copilot token: " COPILOT_GITHUB_TOKEN; printf '\n'
+read -rs "Workshop Copilot token: " COPILOT_GITHUB_TOKEN; printf '\n'
 export COPILOT_GITHUB_TOKEN
 export COPILOT_MODEL=gpt-6-astra
 python -m finops_agent ask "目前本月的範例費用是多少？"
