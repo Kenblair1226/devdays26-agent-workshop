@@ -2,6 +2,17 @@
 
 **課前完成安裝與認證**，讓現場可以專心實作。課程依序進行用量調查、本機額度申請與人工核准；Foundry 模型切換是 Lab 2 選配，Hosted Agent 部署是 Lab 3 選配。
 
+## 主辦方：Foundry 環境及 Github copilot 授權
+
+![](images/Screenshot%202026-09-21%20173518.png)
+
+![](images/Screenshot%202026-09-21%20173544.png)
+
+![](images/Screenshot%202026-09-21%20173603.png)
+
+![](images/Screenshot%202026-09-21%20173726.png)
+
+
 ## 學員必要環境
 
 | 項目 | Lab 1 | Lab 2 | Lab 3 |
@@ -131,17 +142,6 @@ Hosted 部署時，`azure.yaml` 會把 azd 的 `AZURE_AI_MODEL_DEPLOYMENT_NAME` 
 先確認實際 deployment，再依[Hosted 部署說明](hosted-deployment.md#這次部署什麼)同步綁定。
 
 第一次設定請直接使用本節提供的變數名稱。若出現「舊 Foundry 設定遷移提醒」，再依[疑難排解](troubleshooting.md)更新既有設定；請勿混用新 endpoint 與舊 key。
-
-
-## 主辦方：Foundry 環境及 Github copilot 授權
-
-![](images/Screenshot%202026-09-21%20173518.png)
-
-![](images/Screenshot%202026-09-21%20173544.png)
-
-![](images/Screenshot%202026-09-21%20173603.png)
-
-![](images/Screenshot%202026-09-21%20173726.png)
 
 
 ## 安全與清理
